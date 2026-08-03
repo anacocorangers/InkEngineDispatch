@@ -22,6 +22,7 @@ type YouTubeSearchResponse = {
 type YouTubeAdapterOptions = {
   apiKey?: string
   fetchImpl?: typeof fetch
+  refreshIntervalMs?: number
 }
 
 function sampleItem(nowIso: string): DispatchItem {
@@ -37,11 +38,17 @@ function sampleItem(nowIso: string): DispatchItem {
 }
 
 export function createYouTubeAdapter(options: YouTubeAdapterOptions = {}): SourceAdapter {
+  let lastFetchedAt = 0
+
   return {
     id: 'youtube',
     async fetchLatest(context) {
       const apiKey = options.apiKey ?? process.env.YOUTUBE_API_KEY
       if (!apiKey) return [sampleItem(context.nowIso)]
+
+      const now = Date.parse(context.nowIso)
+      const refreshIntervalMs = options.refreshIntervalMs ?? 30 * 60 * 1000
+      if (lastFetchedAt && now - lastFetchedAt < refreshIntervalMs) return []
 
       const url = new URL('https://www.googleapis.com/youtube/v3/search')
       url.search = new URLSearchParams({
@@ -60,6 +67,7 @@ export function createYouTubeAdapter(options: YouTubeAdapterOptions = {}): Sourc
       }
 
       const payload = await response.json() as YouTubeSearchResponse
+      lastFetchedAt = now
       return (payload.items ?? []).flatMap((item): DispatchItem[] => {
         const videoId = item.id?.videoId
         const snippet = item.snippet
@@ -85,9 +93,4 @@ export function createYouTubeAdapter(options: YouTubeAdapterOptions = {}): Sourc
   }
 }
 
-export const youtubeAdapter: SourceAdapter = {
-  id: 'youtube',
-  async fetchLatest(context) {
-    return createYouTubeAdapter().fetchLatest(context)
-  },
-}
+export const youtubeAdapter = createYouTubeAdapter()

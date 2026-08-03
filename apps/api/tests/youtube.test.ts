@@ -26,6 +26,10 @@ describe('YouTube adapter', () => {
       url: 'https://www.youtube.com/watch?v=video-123',
       embedUrl: 'https://www.youtube-nocookie.com/embed/video-123',
     })])
+
+    const throttled = await adapter.fetchLatest({ nowIso: '2026-08-02T18:01:00.000Z' })
+    expect(throttled).toEqual([])
+    expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
   it('keeps the development placeholder when no API key is configured', async () => {
