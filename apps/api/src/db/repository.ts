@@ -124,15 +124,25 @@ export class PostgresPostRepository implements PostRepository {
     const last = selected.at(-1)
 
     return {
-      items: selected.map((row) => ({
-        id: row.externalId,
-        sourceId: row.sourceId as DispatchItem['sourceId'],
-        title: row.title,
-        summary: row.summary,
-        url: row.url,
-        publishedAt: row.publishedAt.toISOString(),
-        tags: row.tags,
-      })),
+      items: selected.map((row) => {
+        const youtubeMedia = row.sourceId === 'youtube' && row.externalId !== 'youtube-sample'
+          ? {
+              thumbnailUrl: `https://i.ytimg.com/vi/${row.externalId}/hqdefault.jpg`,
+              embedUrl: `https://www.youtube-nocookie.com/embed/${row.externalId}`,
+            }
+          : {}
+
+        return {
+          id: row.externalId,
+          sourceId: row.sourceId as DispatchItem['sourceId'],
+          title: row.title,
+          summary: row.summary,
+          url: row.url,
+          ...youtubeMedia,
+          publishedAt: row.publishedAt.toISOString(),
+          tags: row.tags,
+        }
+      }),
       nextCursor: hasMore && last
         ? encodeCursor({ publishedAt: last.publishedAt.toISOString(), id: last.id })
         : null,

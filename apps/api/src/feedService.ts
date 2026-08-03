@@ -62,10 +62,12 @@ export async function buildFeed(
 ): Promise<FeedResponse> {
   const nowIso = now.toISOString()
   if (!options.cursor) {
-    const fetched = await Promise.all(
+    const fetched = await Promise.allSettled(
       sourceAdapters.map((adapter) => adapter.fetchLatest({ nowIso })),
     )
-    await repository.upsertPosts(fetched.flat())
+    await repository.upsertPosts(
+      fetched.flatMap((result) => result.status === 'fulfilled' ? result.value : []),
+    )
   }
 
   const page = await repository.listPosts(options.limit ?? 20, options.cursor)
@@ -81,6 +83,15 @@ export async function buildFeed(
 export async function buildSourceStatuses(now = new Date()): Promise<SourceResponse> {
   const nowIso = now.toISOString()
   const statuses: SourceStatus[] = SOURCE_DEFINITIONS.map((source) => {
+    if (source.id === 'youtube' && process.env.YOUTUBE_API_KEY) {
+      return {
+        sourceId: source.id,
+        state: 'ok',
+        message: 'YouTube Data API search is connected.',
+        lastSync: nowIso,
+      }
+    }
+
     if (source.authRequirement === 'required') {
       return {
         sourceId: source.id,

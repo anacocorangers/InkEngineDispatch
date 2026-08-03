@@ -1,11 +1,36 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { FeedResponse, SourceResponse } from '@inkengine/contracts'
+import type { DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
 import './App.css'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 
 function apiUrl(path: string) {
   return `${apiBaseUrl}${path}`
+}
+
+function VideoPlayer({ item }: { item: DispatchItem }) {
+  const [playing, setPlaying] = useState(false)
+  if (!item.embedUrl || !item.thumbnailUrl) return null
+
+  return (
+    <div className='video-frame'>
+      {playing
+        ? (
+            <iframe
+              src={`${item.embedUrl}?autoplay=1`}
+              title={item.title}
+              allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+              allowFullScreen
+            />
+          )
+        : (
+            <button type='button' className='video-poster' onClick={() => setPlaying(true)} aria-label={`Play ${item.title}`}>
+              <img src={item.thumbnailUrl} alt='' loading='lazy' />
+              <span className='play-control' aria-hidden='true'>Play</span>
+            </button>
+          )}
+    </div>
+  )
 }
 
 function App() {
@@ -162,6 +187,7 @@ function App() {
                   <span className='source-tag'>{item.sourceId}</span>
                   <time>{new Date(item.publishedAt).toLocaleString()}</time>
                 </div>
+                <VideoPlayer item={item} />
                 <h3>{item.title}</h3>
                 <p>{item.summary}</p>
                 <a href={item.url} target='_blank' rel='noreferrer'>View source</a>
