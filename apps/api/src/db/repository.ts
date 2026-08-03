@@ -150,9 +150,15 @@ export function getPostgresOptions(databaseUrl: string) {
   }
 }
 
+export function getPostgresUrl(databaseUrl: string) {
+  const url = new URL(databaseUrl)
+  url.searchParams.delete('host')
+  return url.toString()
+}
+
 export function createPostRepository(databaseUrl?: string): PostRepository {
   if (!databaseUrl) return new MemoryPostRepository()
-  const client = postgres(databaseUrl, getPostgresOptions(databaseUrl))
+  const client = postgres(getPostgresUrl(databaseUrl), getPostgresOptions(databaseUrl))
   const db = drizzle(client, { schema })
   return new PostgresPostRepository(db)
 }
