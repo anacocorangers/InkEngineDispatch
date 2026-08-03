@@ -7,7 +7,7 @@ import { createPostRepository } from './db/repository.js'
 const config = loadConfig()
 const postRepository = createPostRepository(config.databaseUrl)
 
-const app = Fastify({ logger: false })
+const app = Fastify({ logger: true })
 
 await app.register(cors, {
   origin: config.webOrigin,
