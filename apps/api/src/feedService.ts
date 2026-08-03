@@ -1,0 +1,114 @@
+import {
+  SOURCE_DEFINITIONS,
+  type SourceResponse,
+  type SourceStatus,
+  type FeedResponse,
+} from '@inkengine/contracts'
+import { discordAdapter } from './adapters/discord.js'
+import { officialSiteAdapter } from './adapters/officialSite.js'
+import { redditAdapter } from './adapters/reddit.js'
+import { steamAdapter } from './adapters/steam.js'
+import { tiktokAdapter } from './adapters/tiktok.js'
+import { youtubeAdapter } from './adapters/youtube.js'
+import {
+  blueskyAdapter,
+  facebookAdapter,
+  instagramAdapter,
+  linkedinAdapter,
+  mastodonAdapter,
+  pinterestAdapter,
+  snapchatAdapter,
+  telegramAdapter,
+  threadsAdapter,
+  tumblrAdapter,
+  twitchAdapter,
+  xAdapter,
+} from './adapters/social.js'
+import type { SourceAdapter } from './adapters/types.js'
+import { MemoryPostRepository, type PostRepository } from './db/repository.js'
+
+export const sourceAdapters: SourceAdapter[] = [
+  youtubeAdapter,
+  twitchAdapter,
+  steamAdapter,
+  redditAdapter,
+  officialSiteAdapter,
+  discordAdapter,
+  tiktokAdapter,
+  xAdapter,
+  facebookAdapter,
+  instagramAdapter,
+  threadsAdapter,
+  blueskyAdapter,
+  mastodonAdapter,
+  linkedinAdapter,
+  telegramAdapter,
+  pinterestAdapter,
+  snapchatAdapter,
+  tumblrAdapter,
+]
+
+const fallbackRepository = new MemoryPostRepository()
+
+export type FeedOptions = {
+  cursor?: string
+  limit?: number
+}
+
+export async function buildFeed(
+  now = new Date(),
+  repository: PostRepository = fallbackRepository,
+  options: FeedOptions = {},
+): Promise<FeedResponse> {
+  const nowIso = now.toISOString()
+  if (!options.cursor) {
+    const fetched = await Promise.all(
+      sourceAdapters.map((adapter) => adapter.fetchLatest({ nowIso })),
+    )
+    await repository.upsertPosts(fetched.flat())
+  }
+
+  const page = await repository.listPosts(options.limit ?? 20, options.cursor)
+
+  return {
+    generatedAt: nowIso,
+    items: page.items,
+    nextCursor: page.nextCursor,
+    storage: repository.storage,
+  }
+}
+
+export async function buildSourceStatuses(now = new Date()): Promise<SourceResponse> {
+  const nowIso = now.toISOString()
+  const statuses: SourceStatus[] = SOURCE_DEFINITIONS.map((source) => {
+    if (source.authRequirement === 'required') {
+      return {
+        sourceId: source.id,
+        state: 'auth-required',
+        message: 'Configure credentials to enable live pulls.',
+        lastSync: nowIso,
+      }
+    }
+
+    if (source.authRequirement === 'optional') {
+      return {
+        sourceId: source.id,
+        state: 'degraded',
+        message: 'Running with sample adapter payloads.',
+        lastSync: nowIso,
+      }
+    }
+
+    return {
+      sourceId: source.id,
+      state: 'ok',
+      message: 'Public endpoint path ready.',
+      lastSync: nowIso,
+    }
+  })
+
+  return {
+    generatedAt: nowIso,
+    sources: statuses,
+  }
+}

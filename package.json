@@ -1,0 +1,35 @@
+{
+  "name": "inkengine-dispatch",
+  "version": "0.1.0",
+  "description": "InkEngine ecosystem dispatch monitor",
+  "scripts": {
+    "predev": "npm --workspace @inkengine/contracts run build",
+    "dev": "concurrently \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "npm --workspace @inkengine/web run dev",
+    "dev:api": "npm --workspace @inkengine/api run dev",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:migrate": "npm --workspace @inkengine/api run db:migrate",
+    "db:generate": "npm --workspace @inkengine/api run db:generate",
+    "build": "npm --workspace @inkengine/contracts run build && npm --workspace @inkengine/api run build && npm --workspace @inkengine/web run build",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "check:types": "npm run typecheck --workspaces --if-present"
+  },
+  "keywords": [
+    "inkengine",
+    "dispatch",
+    "dashboard"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

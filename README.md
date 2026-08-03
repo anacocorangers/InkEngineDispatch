@@ -1,0 +1,82 @@
+# InkEngine Dispatch
+
+InkEngine Dispatch is a sibling project in the InkEngine ecosystem. It tracks official updates, social signals, and platform releases in a unified dashboard.
+
+## Workspace Layout
+
+- `apps/web`: Vite + React dashboard
+- `apps/api`: Fastify aggregation API
+- `packages/contracts`: Shared source/feed schemas and types
+
+## Source Coverage
+
+- YouTube (optional API key), Twitch
+- Steam News (public endpoint)
+- Reddit (optional OAuth for better limits)
+- Official site RSS/scrape path
+- Discord, TikTok, X, Facebook, Instagram, and Threads
+- Bluesky and Mastodon public APIs
+- LinkedIn, Telegram, Pinterest, Snapchat, and Tumblr
+
+## Local Development
+
+1. Copy `.env.example` to `.env`, add the account/channel identifiers to monitor, and fill the credentials for restricted APIs.
+2. Install dependencies, start PostgreSQL, and apply migrations:
+
+```sh
+npm install
+npm run db:up
+npm run db:migrate
+```
+
+3. Run both apps:
+
+```sh
+npm run dev
+```
+
+4. Open the dashboard at `http://localhost:5173`.
+
+Without `DATABASE_URL`, the API automatically uses in-memory storage. This keeps development available but does not retain posts across restarts.
+
+## Scripts
+
+```sh
+npm run dev
+npm run build
+npm run test
+npm run lint
+npm run check:types
+npm run db:up
+npm run db:migrate
+npm run db:generate
+npm run db:down
+```
+
+## API Endpoints
+
+- `GET /health`
+- `GET /api/sources`
+- `GET /api/feed`
+
+Feed pagination uses `GET /api/feed?limit=20&cursor=...`. The response includes `nextCursor` and reports whether it came from `memory` or `postgres` storage.
+
+## Notes
+
+- Social adapters are intentionally credential-safe stubs until account targets and approved API credentials are configured. InkEngine Dispatch does not bypass logins, rate limits, or platform access controls.
+- Bluesky and Mastodon support public API collection without credentials once target handles are configured.
+- PostgreSQL deduplicates posts by source and external ID. Drizzle migrations live in `apps/api/drizzle`.
+- Shared contracts are published inside the monorepo as the `@inkengine/contracts` workspace package.
+
+## Google Cloud Run
+
+The API container is defined by the root `Dockerfile`. Cloud Build configuration lives in `cloudbuild.yaml` and deploys to `us-east1` using the `inkengine` Artifact Registry repository.
+
+```sh
+gcloud builds submit \
+	--project=inkenginelive-dispatch \
+	--config=cloudbuild.yaml \
+	.
+```
+
+Before production deployment, configure `DATABASE_URL` and `INKENGINE_WEB_ORIGIN` through Secret Manager and Cloud Run environment settings. Never commit `.env`.
