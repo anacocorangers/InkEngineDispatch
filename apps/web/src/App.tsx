@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FeedResponse, SourceResponse } from '@inkengine/contracts'
 import './App.css'
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+
+function apiUrl(path: string) {
+  return `${apiBaseUrl}${path}`
+}
+
 function App() {
   const [sources, setSources] = useState<SourceResponse | null>(null)
   const [feed, setFeed] = useState<FeedResponse | null>(null)
@@ -17,8 +23,8 @@ function App() {
       setError(null)
       try {
         const [sourcesResponse, feedResponse] = await Promise.all([
-          fetch('/api/sources'),
-          fetch('/api/feed'),
+          fetch(apiUrl('/api/sources')),
+          fetch(apiUrl('/api/feed')),
         ])
 
         if (!sourcesResponse.ok || !feedResponse.ok) {
@@ -58,7 +64,7 @@ function App() {
     if (!feed?.nextCursor || loadingMore) return
     setLoadingMore(true)
     try {
-      const response = await fetch(`/api/feed?cursor=${encodeURIComponent(feed.nextCursor)}`)
+      const response = await fetch(apiUrl(`/api/feed?cursor=${encodeURIComponent(feed.nextCursor)}`))
       if (!response.ok) throw new Error('Unable to load older dispatches.')
       const page = await response.json() as FeedResponse
       setFeed((current) => current

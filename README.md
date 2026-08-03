@@ -74,9 +74,21 @@ The API container is defined by the root `Dockerfile`. Cloud Build configuration
 
 ```sh
 gcloud builds submit \
-	--project=inkenginelive-dispatch \
+	--project=inkeginelive-dispatch \
 	--config=cloudbuild.yaml \
 	.
 ```
 
 Before production deployment, configure `DATABASE_URL` and `INKENGINE_WEB_ORIGIN` through Secret Manager and Cloud Run environment settings. Never commit `.env`.
+
+## Vercel
+
+Import the GitHub repository as a Vercel project and leave the root directory at the repository root. The checked-in `vercel.json` builds the shared contracts package before the web app.
+
+Set this Vercel production environment variable to the Cloud Run service URL, without a trailing slash:
+
+```text
+VITE_API_BASE_URL=https://your-cloud-run-service-url
+```
+
+After Vercel assigns a production URL, set Cloud Run's `INKENGINE_WEB_ORIGIN` to that exact HTTPS origin. When `dispatch.inkengine.live` is attached, update both values to use the final domain where appropriate.
