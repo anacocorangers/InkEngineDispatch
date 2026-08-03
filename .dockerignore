@@ -7,5 +7,4 @@
 **/dist
 **/coverage
 **/*.tsbuildinfo
-apps/web
 compose.yaml
