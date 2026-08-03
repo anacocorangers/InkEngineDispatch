@@ -140,9 +140,19 @@ export class PostgresPostRepository implements PostRepository {
   }
 }
 
+export function getPostgresOptions(databaseUrl: string) {
+  const host = new URL(databaseUrl).searchParams.get('host')
+
+  return {
+    max: 10,
+    prepare: false,
+    ...(host ? { host } : {}),
+  }
+}
+
 export function createPostRepository(databaseUrl?: string): PostRepository {
   if (!databaseUrl) return new MemoryPostRepository()
-  const client = postgres(databaseUrl, { max: 10, prepare: false })
+  const client = postgres(databaseUrl, getPostgresOptions(databaseUrl))
   const db = drizzle(client, { schema })
   return new PostgresPostRepository(db)
 }

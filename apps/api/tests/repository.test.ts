@@ -1,6 +1,6 @@
 import type { DispatchItem } from '@inkengine/contracts'
 import { describe, expect, it } from 'vitest'
-import { MemoryPostRepository } from '../src/db/repository.js'
+import { getPostgresOptions, MemoryPostRepository } from '../src/db/repository.js'
 
 function createItem(id: string, publishedAt: string): DispatchItem {
   return {
@@ -15,6 +15,15 @@ function createItem(id: string, publishedAt: string): DispatchItem {
 }
 
 describe('post repository', () => {
+  it('uses the Cloud SQL socket from the database URL', () => {
+    const options = getPostgresOptions(
+      'postgresql://app:secret@localhost/dispatch?host=%2Fcloudsql%2Fproject%3Aus-east1%3Adispatch',
+    )
+
+    expect(options.host).toBe('/cloudsql/project:us-east1:dispatch')
+    expect(getPostgresOptions('postgresql://app:secret@localhost/dispatch')).not.toHaveProperty('host')
+  })
+
   it('upserts duplicate source posts', async () => {
     const repository = new MemoryPostRepository()
     await repository.upsertPosts([
