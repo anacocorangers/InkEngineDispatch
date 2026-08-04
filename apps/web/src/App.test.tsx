@@ -5,6 +5,6 @@ import App from './App'
 describe('App', () => {
   it('renders the dispatch title', () => {
     const html = renderToString(<App />)
-    expect(html).toContain('InkEngine Dispatch')
+    expect(html).toContain('Dispatch.InkEngine.Live')
   })
 })

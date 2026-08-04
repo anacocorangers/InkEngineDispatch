@@ -125,7 +125,7 @@ function App() {
       <header className='dispatch-header'>
         <div>
           <p className='eyebrow'>InkEngine Ecosystem Monitor</p>
-          <h1>InkEngine Dispatch</h1>
+          <h1>Dispatch.InkEngine.Live</h1>
           <p className='subtitle'>Live source observatory for campaign updates, releases, and community signals.</p>
         </div>
         <div className='pulse-chip'>
