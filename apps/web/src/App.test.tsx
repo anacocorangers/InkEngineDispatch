@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
 import App from './App'
-import { buildYouTubeEmbedUrl, requiresExternalYouTubePlayback } from './youtube'
+import { buildYouTubeEmbedUrl, isHlsManifestUrl, requiresExternalYouTubePlayback } from './youtube'
 
 describe('App', () => {
   it('renders the dispatch title', () => {
@@ -25,5 +25,10 @@ describe('App', () => {
   it('requires external playback only in the VS Code Electron browser', () => {
     expect(requiresExternalYouTubePlayback('Mozilla/5.0 Code/1.131.0 Electron/42.7.0')).toBe(true)
     expect(requiresExternalYouTubePlayback('Mozilla/5.0 Chrome/148.0.0.0 Safari/537.36')).toBe(false)
+  })
+
+  it('detects HLS manifests', () => {
+    expect(isHlsManifestUrl('https://storage.googleapis.com/dispatch/videos/master.m3u8')).toBe(true)
+    expect(isHlsManifestUrl('https://storage.googleapis.com/dispatch/videos/video.mp4')).toBe(false)
   })
 })

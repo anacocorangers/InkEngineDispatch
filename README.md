@@ -81,6 +81,8 @@ gcloud builds submit \
 
 Before production deployment, configure `DATABASE_URL` and `INKENGINE_WEB_ORIGIN` through Secret Manager and Cloud Run environment settings. Never commit `.env`.
 
+If you are serving videos from Google Cloud Storage or a CDN, set `INKENGINE_MEDIA_BASE_URL` to the public HLS directory prefix. Dispatch will look for manifests at `${INKENGINE_MEDIA_BASE_URL}/${videoId}/master.m3u8` for YouTube-sourced feed items.
+
 ## Vercel
 
 Import the GitHub repository as a Vercel project and leave the root directory at the repository root. The checked-in `vercel.json` builds the shared contracts package before the web app.

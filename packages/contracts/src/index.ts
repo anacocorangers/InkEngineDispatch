@@ -42,6 +42,7 @@ export const dispatchItemSchema = z.object({
   summary: z.string(),
   url: z.url(),
   thumbnailUrl: z.url().optional(),
+  playbackUrl: z.url().optional(),
   embedUrl: z.url().optional(),
   publishedAt: z.iso.datetime(),
   tags: z.array(z.string()),

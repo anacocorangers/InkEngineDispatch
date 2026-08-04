@@ -12,3 +12,12 @@ export function buildYouTubeEmbedUrl(embedUrl: string, origin: string) {
 export function requiresExternalYouTubePlayback(userAgent: string) {
   return /\bElectron\//.test(userAgent) && /\bCode\//.test(userAgent)
 }
+
+export function isHlsManifestUrl(urlString: string) {
+  try {
+    return new URL(urlString).pathname.endsWith('.m3u8')
+  }
+  catch {
+    return false
+  }
+}

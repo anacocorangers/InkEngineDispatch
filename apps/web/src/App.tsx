@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Hls from 'hls.js'
 import type { DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
-import { buildYouTubeEmbedUrl, requiresExternalYouTubePlayback } from './youtube'
+import { buildYouTubeEmbedUrl, isHlsManifestUrl, requiresExternalYouTubePlayback } from './youtube'
 import './Dispatch.css'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
@@ -10,23 +11,82 @@ function apiUrl(path: string) {
 }
 
 function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: boolean; onPlay: () => void }) {
-  if (!item.embedUrl || !item.thumbnailUrl) return null
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [mediaError, setMediaError] = useState<string | null>(null)
   const externalPlaybackRequired = requiresExternalYouTubePlayback(window.navigator.userAgent)
+  const embedUrl = item.embedUrl
+
+  useEffect(() => {
+    if (!playing || !item.playbackUrl || !videoRef.current) return
+
+    const video = videoRef.current
+    let hls: Hls | null = null
+    setMediaError(null)
+
+    const stopPlayback = () => {
+      hls?.destroy()
+      video.pause()
+      video.removeAttribute('src')
+      video.load()
+    }
+
+    if (isHlsManifestUrl(item.playbackUrl)) {
+      if (Hls.isSupported()) {
+        hls = new Hls({ enableWorker: true })
+        hls.attachMedia(video)
+        hls.loadSource(item.playbackUrl)
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) setMediaError('This HLS stream could not be loaded.')
+        })
+      }
+      else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = item.playbackUrl
+      }
+      else {
+        setMediaError('This browser cannot play HLS streams.')
+      }
+    }
+    else {
+      video.src = item.playbackUrl
+    }
+
+    void video.play().catch(() => {})
+    return stopPlayback
+  }, [item.playbackUrl, playing])
+
+  if ((!item.playbackUrl && !embedUrl) || !item.thumbnailUrl) return null
 
   return (
     <div className='video-player'>
       <div className='video-frame'>
-        {playing && externalPlaybackRequired
+        {playing && item.playbackUrl
+          ? mediaError
+            ? (
+                <div className='video-browser-notice'>
+                  <strong>Playback unavailable</strong>
+                  <span>{mediaError}</span>
+                </div>
+              )
+            : (
+                <video
+                  ref={videoRef}
+                  controls
+                  autoPlay
+                  playsInline
+                  preload='metadata'
+                />
+              )
+          : playing && externalPlaybackRequired
           ? (
               <div className='video-browser-notice'>
                 <strong>External browser required</strong>
                 <span>VS Code removes a security header required by YouTube playback.</span>
               </div>
             )
-          : playing
+          : playing && embedUrl
           ? (
               <iframe
-                src={buildYouTubeEmbedUrl(item.embedUrl, window.location.origin)}
+                src={buildYouTubeEmbedUrl(embedUrl, window.location.origin)}
                 title={item.title}
                 allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
                 referrerPolicy='strict-origin-when-cross-origin'
@@ -40,7 +100,16 @@ function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: b
               </button>
             )}
       </div>
-      {playing && <a className='video-fallback' href={item.url} target='_blank' rel='noreferrer'>Open in external browser</a>}
+        {playing && (
+          <a
+            className='video-fallback'
+            href={item.playbackUrl ?? item.url}
+            target='_blank'
+            rel='noreferrer'
+          >
+            Open stream in new tab
+          </a>
+        )}
     </div>
   )
 }

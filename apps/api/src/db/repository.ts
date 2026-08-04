@@ -16,6 +16,10 @@ export interface PostRepository {
   listPosts(limit: number, cursor?: string): Promise<FeedPage>
 }
 
+export type PostRepositoryOptions = {
+  mediaBaseUrl?: string
+}
+
 type CursorValue = {
   publishedAt: string
   id: string
@@ -75,7 +79,10 @@ export class MemoryPostRepository implements PostRepository {
 export class PostgresPostRepository implements PostRepository {
   readonly storage = 'postgres' as const
 
-  constructor(private readonly db: PostgresJsDatabase<typeof schema>) {}
+  constructor(
+    private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly options: PostRepositoryOptions = {},
+  ) {}
 
   async upsertPosts(items: DispatchItem[]) {
     if (items.length === 0) return
@@ -126,10 +133,13 @@ export class PostgresPostRepository implements PostRepository {
 
     return {
       items: selected.map((row) => {
+        const rawPayload = row.rawPayload as Partial<DispatchItem> | undefined
+        const mediaBaseUrl = this.options.mediaBaseUrl
         const youtubeMedia = row.sourceId === 'youtube' && row.externalId !== 'youtube-sample'
           ? {
               thumbnailUrl: `https://i.ytimg.com/vi/${row.externalId}/hqdefault.jpg`,
               embedUrl: `https://www.youtube-nocookie.com/embed/${row.externalId}`,
+              playbackUrl: mediaBaseUrl ? `${mediaBaseUrl}/${row.externalId}/master.m3u8` : undefined,
             }
           : {}
 
@@ -139,6 +149,7 @@ export class PostgresPostRepository implements PostRepository {
           title: row.title,
           summary: row.summary,
           url: row.url,
+          playbackUrl: rawPayload?.playbackUrl ?? youtubeMedia.playbackUrl,
           ...youtubeMedia,
           publishedAt: row.publishedAt.toISOString(),
           tags: row.tags,
@@ -167,9 +178,9 @@ export function getPostgresUrl(databaseUrl: string) {
   return url.toString()
 }
 
-export function createPostRepository(databaseUrl?: string): PostRepository {
+export function createPostRepository(databaseUrl?: string, options: PostRepositoryOptions = {}): PostRepository {
   if (!databaseUrl) return new MemoryPostRepository()
   const client = postgres(getPostgresUrl(databaseUrl), getPostgresOptions(databaseUrl))
   const db = drizzle(client, { schema })
-  return new PostgresPostRepository(db)
+  return new PostgresPostRepository(db, options)
 }
