@@ -52,6 +52,10 @@ function parseJsonFile(filePath, label) {
 
 function normalizeItem(metadata, videoId, playbackUrl) {
   const publishedAt = new Date(metadata.publishedAt ?? new Date().toISOString()).toISOString()
+  const tags = Array.isArray(metadata.tags) ? metadata.tags : ['video', 'hosted']
+  if (!tags.some((tag) => /war-of-rights|war of rights/i.test(tag))) {
+    tags.push('war-of-rights')
+  }
 
   return {
     id: metadata.id ?? videoId,
@@ -62,7 +66,7 @@ function normalizeItem(metadata, videoId, playbackUrl) {
     thumbnailUrl: metadata.thumbnailUrl,
     playbackUrl,
     publishedAt,
-    tags: Array.isArray(metadata.tags) ? metadata.tags : ['video', 'hosted'],
+    tags,
   }
 }
 

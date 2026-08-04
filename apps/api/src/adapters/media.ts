@@ -27,6 +27,14 @@ function getItems(payload: MediaFeedResponse | MediaFeedItem[]) {
   return Array.isArray(payload) ? payload : payload.items ?? []
 }
 
+function withWarOfRightsTag(tags: string[] | undefined) {
+  const merged = [...(tags ?? ['video', 'hosted'])]
+  if (!merged.some((tag) => /war-of-rights|war of rights/i.test(tag))) {
+    merged.push('war-of-rights')
+  }
+  return [...new Set(merged)]
+}
+
 export function createMediaAdapter(options: MediaAdapterOptions = {}): SourceAdapter {
   return {
     id: 'media',
@@ -58,7 +66,7 @@ export function createMediaAdapter(options: MediaAdapterOptions = {}): SourceAda
           thumbnailUrl: item.thumbnailUrl,
           playbackUrl: item.playbackUrl,
           publishedAt: new Date(item.publishedAt).toISOString(),
-          tags: item.tags ?? ['video', 'hosted'],
+          tags: withWarOfRightsTag(item.tags),
         }
 
         return isAllowedDispatchItem(dispatchItem) ? [dispatchItem] : []
