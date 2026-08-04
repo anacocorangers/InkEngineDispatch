@@ -5,7 +5,7 @@ import { buildFeed, buildSourceStatuses } from './feedService.js'
 import { createPostRepository } from './db/repository.js'
 
 const config = loadConfig()
-const postRepository = createPostRepository(config.databaseUrl, { mediaBaseUrl: config.mediaBaseUrl })
+const postRepository = createPostRepository(config.databaseUrl)
 
 const app = Fastify({ logger: true })
 

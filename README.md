@@ -11,6 +11,7 @@ InkEngine Dispatch is a sibling project in the InkEngine ecosystem. It tracks of
 ## Source Coverage
 
 - YouTube (optional API key), Twitch
+- Hosted media feed for curated HLS playback
 - Steam News (public endpoint)
 - Reddit (optional OAuth for better limits)
 - Official site RSS/scrape path
@@ -81,7 +82,7 @@ gcloud builds submit \
 
 Before production deployment, configure `DATABASE_URL` and `INKENGINE_WEB_ORIGIN` through Secret Manager and Cloud Run environment settings. Never commit `.env`.
 
-If you are serving videos from Google Cloud Storage or a CDN, set `INKENGINE_MEDIA_BASE_URL` to the public HLS directory prefix. Dispatch will look for manifests at `${INKENGINE_MEDIA_BASE_URL}/${videoId}/master.m3u8` for YouTube-sourced feed items.
+Dispatch can also ingest a separate hosted media feed for curated videos you own or are licensed to host. Set `INKENGINE_MEDIA_FEED_URL` to a JSON feed that returns items with `playbackUrl` values pointing at HLS manifests.
 
 ## Google Cloud Storage + HLS
 
@@ -121,13 +122,13 @@ Upload the manifest set to GCS:
 gsutil -m cp -r ./output/* gs://inkengine-dispatch-media/videos/<video-id>/
 ```
 
-Set the API environment variable to the public HLS prefix:
+Set the hosted media feed environment variable:
 
 ```text
-INKENGINE_MEDIA_BASE_URL=https://storage.googleapis.com/inkengine-dispatch-media/videos
+INKENGINE_MEDIA_FEED_URL=https://storage.googleapis.com/inkengine-dispatch-media/media-feed.json
 ```
 
-When Dispatch receives a YouTube item, it will prefer `${INKENGINE_MEDIA_BASE_URL}/${videoId}/master.m3u8` and fall back to the YouTube embed path if no HLS manifest exists yet.
+The feed item format is a JSON array or object with an `items` array. Each item should include `id`, `title`, `summary`, `url`, `thumbnailUrl`, `playbackUrl`, `publishedAt`, and `tags`.
 
 To automate the packaging/upload step from the repo root, run:
 
@@ -142,6 +143,8 @@ On Windows, you can use the wrapper instead:
 ```bat
 scripts\publish-hls.cmd .\input.mp4 <video-id> gs://inkengine-dispatch-media/videos
 ```
+
+Set `INKENGINE_MEDIA_FEED_TOKEN` if your feed requires a bearer token.
 
 ## Vercel
 

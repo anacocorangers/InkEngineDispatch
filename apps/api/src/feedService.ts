@@ -24,11 +24,13 @@ import {
   twitchAdapter,
   xAdapter,
 } from './adapters/social.js'
+import { mediaAdapter } from './adapters/media.js'
 import type { SourceAdapter } from './adapters/types.js'
 import { MemoryPostRepository, type PostRepository } from './db/repository.js'
 
 export const sourceAdapters: SourceAdapter[] = [
   youtubeAdapter,
+  mediaAdapter,
   twitchAdapter,
   steamAdapter,
   redditAdapter,
@@ -83,11 +85,29 @@ export async function buildFeed(
 export async function buildSourceStatuses(now = new Date()): Promise<SourceResponse> {
   const nowIso = now.toISOString()
   const statuses: SourceStatus[] = SOURCE_DEFINITIONS.map((source) => {
+    if (source.id === 'media' && process.env.INKENGINE_MEDIA_FEED_URL) {
+      return {
+        sourceId: source.id,
+        state: 'ok',
+        message: 'Hosted media feed is connected.',
+        lastSync: nowIso,
+      }
+    }
+
     if (source.id === 'youtube' && process.env.YOUTUBE_API_KEY) {
       return {
         sourceId: source.id,
         state: 'ok',
         message: 'YouTube Data API search is connected.',
+        lastSync: nowIso,
+      }
+    }
+
+    if (source.id === 'media') {
+      return {
+        sourceId: source.id,
+        state: 'auth-required',
+        message: 'Configure INKENGINE_MEDIA_FEED_URL to enable hosted playback.',
         lastSync: nowIso,
       }
     }

@@ -10,7 +10,6 @@ export type ApiConfig = {
   host: string
   webOrigin: string | string[]
   databaseUrl?: string
-  mediaBaseUrl?: string
   feedPageSize: number
 }
 
@@ -25,7 +24,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     host: env.INKENGINE_API_HOST ?? (env.K_SERVICE ? '0.0.0.0' : '127.0.0.1'),
     webOrigin: parseWebOrigin(env.INKENGINE_WEB_ORIGIN),
     databaseUrl: env.DATABASE_URL,
-    mediaBaseUrl: env.INKENGINE_MEDIA_BASE_URL?.replace(/\/$/, ''),
     feedPageSize: Number(env.INKENGINE_FEED_PAGE_SIZE ?? 20),
   }
 }

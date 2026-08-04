@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const sourceIdSchema = z.enum([
   'youtube',
+  'media',
   'twitch',
   'steam',
   'reddit',
@@ -81,6 +82,12 @@ export const SOURCE_DEFINITIONS: SourceDefinition[] = [
     label: 'YouTube',
     authRequirement: 'optional',
     statusNote: 'Uses channel and playlist APIs when key is provided.',
+  },
+  {
+    id: 'media',
+    label: 'Hosted Media',
+    authRequirement: 'required',
+    statusNote: 'Reads curated HLS items from an authorized media feed.',
   },
   {
     id: 'twitch',
