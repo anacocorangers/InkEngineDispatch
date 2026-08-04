@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Hls from 'hls.js'
 import type { DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
-import { buildYouTubeEmbedUrl, isHlsManifestUrl, requiresExternalYouTubePlayback } from './youtube'
+import { buildYouTubeEmbedUrl, isHlsManifestUrl } from './youtube'
 import './Dispatch.css'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
@@ -13,7 +13,6 @@ function apiUrl(path: string) {
 function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: boolean; onPlay: () => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [mediaError, setMediaError] = useState<string | null>(null)
-  const externalPlaybackRequired = requiresExternalYouTubePlayback(window.navigator.userAgent)
   const embedUrl = item.embedUrl
 
   useEffect(() => {
@@ -76,13 +75,6 @@ function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: b
                   preload='metadata'
                 />
               )
-          : playing && externalPlaybackRequired
-          ? (
-              <div className='video-browser-notice'>
-                <strong>External browser required</strong>
-                <span>VS Code removes a security header required by YouTube playback.</span>
-              </div>
-            )
           : playing && embedUrl
           ? (
               <iframe
