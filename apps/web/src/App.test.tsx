@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
+import type { DispatchItem } from '@inkengine/contracts'
 import App from './App'
 import { buildYouTubeEmbedUrl, isHlsManifestUrl } from './youtube'
+import { compareDispatchItems } from './relevance'
 
 describe('App', () => {
   it('renders the dispatch title', () => {
@@ -25,5 +27,29 @@ describe('App', () => {
   it('detects HLS manifests', () => {
     expect(isHlsManifestUrl('https://storage.googleapis.com/dispatch/videos/master.m3u8')).toBe(true)
     expect(isHlsManifestUrl('https://storage.googleapis.com/dispatch/videos/video.mp4')).toBe(false)
+  })
+
+  it('ranks War of Rights items ahead of generic bannerlord clips', () => {
+    const wor: DispatchItem = {
+      id: 'wor',
+      sourceId: 'youtube',
+      title: 'War of Rights - Grand Campaign',
+      summary: 'A War of Rights battle.',
+      url: 'https://example.com/wor',
+      publishedAt: '2026-08-03T01:00:00.000Z',
+      tags: ['video', 'war-of-rights'],
+    }
+
+    const bannerlord: DispatchItem = {
+      id: 'bannerlord',
+      sourceId: 'youtube',
+      title: 'Bannerlord highlights',
+      summary: 'A clip from another game.',
+      url: 'https://example.com/bannerlord',
+      publishedAt: '2026-08-03T02:00:00.000Z',
+      tags: ['video'],
+    }
+
+    expect(compareDispatchItems(wor, bannerlord)).toBeLessThan(0)
   })
 })

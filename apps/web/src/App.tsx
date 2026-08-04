@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Hls from 'hls.js'
 import type { DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
 import { buildYouTubeEmbedUrl, isHlsManifestUrl } from './youtube'
+import { compareDispatchItems } from './relevance'
 import './Dispatch.css'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
@@ -194,6 +195,11 @@ function App() {
     )
   }, [sources])
 
+    const rankedFeedItems = useMemo(() => {
+      if (!feed) return []
+      return [...feed.items].sort(compareDispatchItems)
+    }, [feed])
+
   return (
     <main className='dispatch-shell'>
       <header className='dispatch-header'>
@@ -267,7 +273,7 @@ function App() {
           <h2>Dispatch Feed</h2>
           <p className='panel-copy'>Newest reports from connected sources, filed by publication time.</p>
           <ul className='feed-list'>
-            {feed?.items.map((item) => (
+            {rankedFeedItems.map((item) => (
               <li key={item.id} className='feed-item'>
                 <div className='feed-head'>
                   <span className='source-tag'>{item.sourceId}</span>
