@@ -137,6 +137,12 @@ npm run media:publish -- ./input.mp4 <video-id> gs://inkengine-dispatch-media/vi
 
 The script expects `ffmpeg` and `gsutil` to be available on your `PATH`.
 
+On Windows, you can use the wrapper instead:
+
+```bat
+scripts\publish-hls.cmd .\input.mp4 <video-id> gs://inkengine-dispatch-media/videos
+```
+
 ## Vercel
 
 Import the GitHub repository as a Vercel project and leave the root directory at the repository root. The checked-in `vercel.json` builds the shared contracts package before the web app.
