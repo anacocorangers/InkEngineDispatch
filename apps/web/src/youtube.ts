@@ -8,3 +8,7 @@ export function buildYouTubeEmbedUrl(embedUrl: string, origin: string) {
   url.searchParams.set('origin', origin)
   return url.toString()
 }
+
+export function requiresExternalYouTubePlayback(userAgent: string) {
+  return /\bElectron\//.test(userAgent) && /\bCode\//.test(userAgent)
+}

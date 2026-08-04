@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
-import { buildYouTubeEmbedUrl } from './youtube'
+import { buildYouTubeEmbedUrl, requiresExternalYouTubePlayback } from './youtube'
 import './Dispatch.css'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
@@ -11,11 +11,19 @@ function apiUrl(path: string) {
 
 function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: boolean; onPlay: () => void }) {
   if (!item.embedUrl || !item.thumbnailUrl) return null
+  const externalPlaybackRequired = requiresExternalYouTubePlayback(window.navigator.userAgent)
 
   return (
     <div className='video-player'>
       <div className='video-frame'>
-        {playing
+        {playing && externalPlaybackRequired
+          ? (
+              <div className='video-browser-notice'>
+                <strong>External browser required</strong>
+                <span>VS Code removes a security header required by YouTube playback.</span>
+              </div>
+            )
+          : playing
           ? (
               <iframe
                 src={buildYouTubeEmbedUrl(item.embedUrl, window.location.origin)}
@@ -32,7 +40,7 @@ function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: b
               </button>
             )}
       </div>
-      {playing && <a className='video-fallback' href={item.url} target='_blank' rel='noreferrer'>Watch on YouTube</a>}
+      {playing && <a className='video-fallback' href={item.url} target='_blank' rel='noreferrer'>Open in external browser</a>}
     </div>
   )
 }

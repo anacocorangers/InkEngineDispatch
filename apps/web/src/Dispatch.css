@@ -293,6 +293,27 @@
   text-align: right;
 }
 
+.video-browser-notice {
+  display: grid;
+  place-content: center;
+  height: 100%;
+  padding: 1.25rem;
+  color: var(--paper);
+  text-align: center;
+}
+
+.video-browser-notice strong {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 1.5rem;
+}
+
+.video-browser-notice span {
+  max-width: 30rem;
+  margin-top: 0.4rem;
+  color: #d7d0bf;
+  font-size: 0.78rem;
+}
+
 .video-frame iframe,
 .video-poster,
 .video-poster img {

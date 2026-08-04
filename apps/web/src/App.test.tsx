@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
 import App from './App'
-import { buildYouTubeEmbedUrl } from './youtube'
+import { buildYouTubeEmbedUrl, requiresExternalYouTubePlayback } from './youtube'
 
 describe('App', () => {
   it('renders the dispatch title', () => {
@@ -20,5 +20,10 @@ describe('App', () => {
     expect(url.searchParams.get('autoplay')).toBe('1')
     expect(url.searchParams.get('playsinline')).toBe('1')
     expect(url.searchParams.get('origin')).toBe('https://dispatch.inkengine.live')
+  })
+
+  it('requires external playback only in the VS Code Electron browser', () => {
+    expect(requiresExternalYouTubePlayback('Mozilla/5.0 Code/1.131.0 Electron/42.7.0')).toBe(true)
+    expect(requiresExternalYouTubePlayback('Mozilla/5.0 Chrome/148.0.0.0 Safari/537.36')).toBe(false)
   })
 })
