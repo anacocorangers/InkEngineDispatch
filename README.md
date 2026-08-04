@@ -83,6 +83,60 @@ Before production deployment, configure `DATABASE_URL` and `INKENGINE_WEB_ORIGIN
 
 If you are serving videos from Google Cloud Storage or a CDN, set `INKENGINE_MEDIA_BASE_URL` to the public HLS directory prefix. Dispatch will look for manifests at `${INKENGINE_MEDIA_BASE_URL}/${videoId}/master.m3u8` for YouTube-sourced feed items.
 
+## Google Cloud Storage + HLS
+
+Recommended bucket layout:
+
+```text
+gs://inkengine-dispatch-media/
+	videos/
+		<video-id>/
+			master.m3u8
+			720p.m3u8
+			720p_00001.ts
+			720p_00002.ts
+			480p.m3u8
+			480p_00001.ts
+			poster.jpg
+```
+
+Package a source file with FFmpeg:
+
+```sh
+ffmpeg -i input.mp4 \
+	-preset veryfast \
+	-g 48 -sc_threshold 0 \
+	-map 0:v:0 -map 0:a:0 \
+	-c:v h264 -c:a aac \
+	-f hls \
+	-hls_time 6 \
+	-hls_playlist_type vod \
+	-hls_segment_filename "720p_%05d.ts" \
+	720p.m3u8
+```
+
+Upload the manifest set to GCS:
+
+```sh
+gsutil -m cp -r ./output/* gs://inkengine-dispatch-media/videos/<video-id>/
+```
+
+Set the API environment variable to the public HLS prefix:
+
+```text
+INKENGINE_MEDIA_BASE_URL=https://storage.googleapis.com/inkengine-dispatch-media/videos
+```
+
+When Dispatch receives a YouTube item, it will prefer `${INKENGINE_MEDIA_BASE_URL}/${videoId}/master.m3u8` and fall back to the YouTube embed path if no HLS manifest exists yet.
+
+To automate the packaging/upload step from the repo root, run:
+
+```sh
+npm run media:publish -- ./input.mp4 <video-id> gs://inkengine-dispatch-media/videos
+```
+
+The script expects `ffmpeg` and `gsutil` to be available on your `PATH`.
+
 ## Vercel
 
 Import the GitHub repository as a Vercel project and leave the root directory at the repository root. The checked-in `vercel.json` builds the shared contracts package before the web app.
