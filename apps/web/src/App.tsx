@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Hls from 'hls.js'
 import type { DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
 import { buildYouTubeEmbedUrl, isHlsManifestUrl } from './youtube'
-import { compareDispatchItems } from './relevance'
+import { compareDispatchItems, isPlayableDispatchItem } from './relevance'
 import './Dispatch.css'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+type FeedFilter = 'all' | 'videos' | 'articles'
 
 function apiUrl(path: string) {
   return `${apiBaseUrl}${path}`
@@ -114,6 +115,7 @@ function App() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [playingItemId, setPlayingItemId] = useState<string | null>(null)
+  const [feedFilter, setFeedFilter] = useState<FeedFilter>('all')
 
   useEffect(() => {
     let active = true
@@ -124,7 +126,7 @@ function App() {
       try {
         const [sourcesResponse, feedResponse] = await Promise.all([
           fetch(apiUrl('/api/sources')),
-          fetch(apiUrl('/api/feed')),
+          fetch(apiUrl('/api/feed?limit=100')),
         ])
 
         if (!sourcesResponse.ok || !feedResponse.ok) {
@@ -195,10 +197,16 @@ function App() {
     )
   }, [sources])
 
-    const rankedFeedItems = useMemo(() => {
-      if (!feed) return []
-      return [...feed.items].sort(compareDispatchItems)
-    }, [feed])
+  const rankedFeedItems = useMemo(() => {
+    if (!feed) return []
+    return [...feed.items]
+      .filter((item) => {
+        if (feedFilter === 'videos') return isPlayableDispatchItem(item)
+        if (feedFilter === 'articles') return !isPlayableDispatchItem(item)
+        return true
+      })
+      .sort(compareDispatchItems)
+  }, [feed, feedFilter])
 
   return (
     <main className='dispatch-shell'>
@@ -272,6 +280,23 @@ function App() {
           <p className='section-kicker'>Latest Intelligence</p>
           <h2>Dispatch Feed</h2>
           <p className='panel-copy'>Newest reports from connected sources, filed by publication time.</p>
+          <div className='feed-filters' role='tablist' aria-label='Choose dispatch content type'>
+            {(['all', 'videos', 'articles'] as const).map((filter) => (
+              <button
+                key={filter}
+                type='button'
+                role='tab'
+                aria-selected={feedFilter === filter}
+                className={feedFilter === filter ? 'active' : undefined}
+                onClick={() => {
+                  setFeedFilter(filter)
+                  setPlayingItemId(null)
+                }}
+              >
+                {filter === 'all' ? 'All dispatches' : filter === 'videos' ? 'Watch videos' : 'Read articles'}
+              </button>
+            ))}
+          </div>
           <ul className='feed-list'>
             {rankedFeedItems.map((item) => (
               <li key={item.id} className='feed-item'>
@@ -286,6 +311,9 @@ function App() {
               </li>
             ))}
             {feed?.items.length === 0 && <li className='feed-item'>No feed items yet.</li>}
+            {feed && feed.items.length > 0 && rankedFeedItems.length === 0 && (
+              <li className='feed-item'>No {feedFilter} are available yet.</li>
+            )}
           </ul>
           {feed?.nextCursor && (
             <button className='load-more-button' type='button' onClick={loadOlder} disabled={loadingMore}>

@@ -126,6 +126,12 @@ export class PostgresPostRepository implements PostRepository {
 
     return {
       items: selected.map((row) => {
+        const rawPayload = row.rawPayload as Partial<DispatchItem> | null
+        const storedMedia = {
+          thumbnailUrl: rawPayload?.thumbnailUrl,
+          playbackUrl: rawPayload?.playbackUrl,
+          embedUrl: rawPayload?.embedUrl,
+        }
         const youtubeMedia = row.sourceId === 'youtube' && row.externalId !== 'youtube-sample'
           ? {
               thumbnailUrl: `https://i.ytimg.com/vi/${row.externalId}/hqdefault.jpg`,
@@ -139,6 +145,7 @@ export class PostgresPostRepository implements PostRepository {
           title: row.title,
           summary: row.summary,
           url: row.url,
+          ...storedMedia,
           ...youtubeMedia,
           publishedAt: row.publishedAt.toISOString(),
           tags: row.tags,

@@ -3,6 +3,10 @@ import type { DispatchItem } from '@inkengine/contracts'
 const warOfRightsPattern = /war\s*of\s*rights/i
 const bannerlordPattern = /bannerlord/i
 
+export function isPlayableDispatchItem(item: DispatchItem) {
+  return Boolean(item.thumbnailUrl && (item.playbackUrl || item.embedUrl))
+}
+
 export function rankDispatchItem(item: DispatchItem) {
   let score = 0
   const searchableText = `${item.title}\n${item.summary}`

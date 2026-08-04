@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server'
 import type { DispatchItem } from '@inkengine/contracts'
 import App from './App'
 import { buildYouTubeEmbedUrl, isHlsManifestUrl } from './youtube'
-import { compareDispatchItems } from './relevance'
+import { compareDispatchItems, isPlayableDispatchItem } from './relevance'
 
 describe('App', () => {
   it('renders the dispatch title', () => {
@@ -27,6 +27,31 @@ describe('App', () => {
   it('detects HLS manifests', () => {
     expect(isHlsManifestUrl('https://storage.googleapis.com/dispatch/videos/master.m3u8')).toBe(true)
     expect(isHlsManifestUrl('https://storage.googleapis.com/dispatch/videos/video.mp4')).toBe(false)
+  })
+
+  it('separates playable videos from articles', () => {
+    const video: DispatchItem = {
+      id: 'steam-video',
+      sourceId: 'steam',
+      title: 'Update video',
+      summary: 'A Steam report with an embedded video.',
+      url: 'https://example.com/video',
+      thumbnailUrl: 'https://example.com/poster.jpg',
+      embedUrl: 'https://www.youtube-nocookie.com/embed/DgUNMYK8WMs',
+      publishedAt: '2026-08-03T01:00:00.000Z',
+      tags: ['steam', 'video', 'war-of-rights'],
+    }
+    const article: DispatchItem = {
+      ...video,
+      id: 'steam-article',
+      title: 'Patch notes',
+      thumbnailUrl: undefined,
+      embedUrl: undefined,
+      tags: ['steam', 'news', 'war-of-rights'],
+    }
+
+    expect(isPlayableDispatchItem(video)).toBe(true)
+    expect(isPlayableDispatchItem(article)).toBe(false)
   })
 
   it('ranks War of Rights items ahead of generic bannerlord clips', () => {

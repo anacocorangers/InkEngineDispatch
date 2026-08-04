@@ -195,6 +195,33 @@
   font-style: italic;
 }
 
+.feed-filters {
+  display: flex;
+  gap: 0;
+  margin: 0 0 1.2rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.feed-filters button {
+  min-height: 2.5rem;
+  padding: 0.55rem 0.8rem;
+  border: 0;
+  border-right: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.feed-filters button:hover,
+.feed-filters button.active {
+  color: var(--paper);
+  background: var(--navy);
+}
+
 .source-list,
 .feed-list {
   list-style: none;
