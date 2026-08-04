@@ -287,6 +287,12 @@
   box-shadow: 5px 5px 0 rgba(75, 73, 66, 0.22);
 }
 
+.feed-item .video-fallback {
+  display: block;
+  margin: 0.7rem 0 0;
+  text-align: right;
+}
+
 .video-frame iframe,
 .video-poster,
 .video-poster img {

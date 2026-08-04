@@ -13,23 +13,26 @@ function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: b
   if (!item.embedUrl || !item.thumbnailUrl) return null
 
   return (
-    <div className='video-frame'>
-      {playing
-        ? (
-            <iframe
-              src={buildYouTubeEmbedUrl(item.embedUrl, window.location.origin)}
-              title={item.title}
-              allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-              referrerPolicy='strict-origin-when-cross-origin'
-              allowFullScreen
-            />
-          )
-        : (
-            <button type='button' className='video-poster' onClick={onPlay} aria-label={`Play ${item.title}`}>
-              <img src={item.thumbnailUrl} alt='' loading='lazy' />
-              <span className='play-control' aria-hidden='true' />
-            </button>
-          )}
+    <div className='video-player'>
+      <div className='video-frame'>
+        {playing
+          ? (
+              <iframe
+                src={buildYouTubeEmbedUrl(item.embedUrl, window.location.origin)}
+                title={item.title}
+                allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                referrerPolicy='strict-origin-when-cross-origin'
+                allowFullScreen
+              />
+            )
+          : (
+              <button type='button' className='video-poster' onClick={onPlay} aria-label={`Play ${item.title}`}>
+                <img src={item.thumbnailUrl} alt='' loading='lazy' />
+                <span className='play-control' aria-hidden='true' />
+              </button>
+            )}
+      </div>
+      {playing && <a className='video-fallback' href={item.url} target='_blank' rel='noreferrer'>Watch on YouTube</a>}
     </div>
   )
 }
