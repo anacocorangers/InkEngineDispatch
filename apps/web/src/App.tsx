@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
+import { buildYouTubeEmbedUrl } from './youtube'
 import './Dispatch.css'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
@@ -8,8 +9,7 @@ function apiUrl(path: string) {
   return `${apiBaseUrl}${path}`
 }
 
-function VideoPlayer({ item }: { item: DispatchItem }) {
-  const [playing, setPlaying] = useState(false)
+function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: boolean; onPlay: () => void }) {
   if (!item.embedUrl || !item.thumbnailUrl) return null
 
   return (
@@ -17,14 +17,15 @@ function VideoPlayer({ item }: { item: DispatchItem }) {
       {playing
         ? (
             <iframe
-              src={`${item.embedUrl}?autoplay=1`}
+              src={buildYouTubeEmbedUrl(item.embedUrl, window.location.origin)}
               title={item.title}
               allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+              referrerPolicy='strict-origin-when-cross-origin'
               allowFullScreen
             />
           )
         : (
-            <button type='button' className='video-poster' onClick={() => setPlaying(true)} aria-label={`Play ${item.title}`}>
+            <button type='button' className='video-poster' onClick={onPlay} aria-label={`Play ${item.title}`}>
               <img src={item.thumbnailUrl} alt='' loading='lazy' />
               <span className='play-control' aria-hidden='true' />
             </button>
@@ -39,6 +40,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [playingItemId, setPlayingItemId] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -199,7 +201,7 @@ function App() {
                   <span className='source-tag'>{item.sourceId}</span>
                   <time>{new Date(item.publishedAt).toLocaleString()}</time>
                 </div>
-                <VideoPlayer item={item} />
+                <VideoPlayer item={item} playing={playingItemId === item.id} onPlay={() => setPlayingItemId(item.id)} />
                 <h3>{item.title}</h3>
                 <p>{item.summary}</p>
                 <a href={item.url} target='_blank' rel='noreferrer'>Read original dispatch</a>
