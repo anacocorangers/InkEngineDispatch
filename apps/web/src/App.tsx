@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
-import './App.css'
+import './Dispatch.css'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 
@@ -26,7 +26,7 @@ function VideoPlayer({ item }: { item: DispatchItem }) {
         : (
             <button type='button' className='video-poster' onClick={() => setPlaying(true)} aria-label={`Play ${item.title}`}>
               <img src={item.thumbnailUrl} alt='' loading='lazy' />
-              <span className='play-control' aria-hidden='true'>Play</span>
+              <span className='play-control' aria-hidden='true' />
             </button>
           )}
     </div>
@@ -123,18 +123,28 @@ function App() {
   return (
     <main className='dispatch-shell'>
       <header className='dispatch-header'>
-        <div>
-          <p className='eyebrow'>InkEngine Ecosystem Monitor</p>
-          <h1>Dispatch.InkEngine.Live</h1>
-          <p className='subtitle'>Live source observatory for campaign updates, releases, and community signals.</p>
+        <div className='masthead-rule'>
+          <span>The InkEngine War Correspondence</span>
+          <span>Established MMXXVI</span>
         </div>
-        <div className='pulse-chip'>
-          <span className={loading ? 'dot pending' : error ? 'dot down' : 'dot live'} />
+        <div className='masthead-body'>
           <div>
-            <strong>{error ? 'API Offline' : 'Live Feed'}</strong>
-            <small>{feed ? `Updated ${new Date(feed.generatedAt).toLocaleTimeString()}` : 'Waiting for first sync'}</small>
-            {feed && <small className='storage-label'>{feed.storage} storage</small>}
+            <p className='eyebrow'>Dispatches from the digital front</p>
+            <h1>Dispatch.<wbr />InkEngine.<wbr />Live</h1>
+            <p className='subtitle'>Reports, moving pictures, and community intelligence from the War of Rights.</p>
           </div>
+          <div className='pulse-chip'>
+            <span className={loading ? 'dot pending' : error ? 'dot down' : 'dot live'} />
+            <div>
+              <strong>{error ? 'Line Interrupted' : 'Wire Service Active'}</strong>
+              <small>{feed ? `Updated ${new Date(feed.generatedAt).toLocaleTimeString()}` : 'Awaiting first dispatch'}</small>
+              {feed && <small className='storage-label'>{feed.storage} archive</small>}
+            </div>
+          </div>
+        </div>
+        <div className='dispatch-dateline'>
+          <span>Published continuously</span>
+          <span>War of Rights Community Intelligence</span>
         </div>
       </header>
 
@@ -161,8 +171,9 @@ function App() {
 
       <section className='panel-grid'>
         <article className='panel'>
+          <p className='section-kicker'>Signal Office</p>
           <h2>Source Readiness</h2>
-          <p className='panel-copy'>Adapters required for ecosystem coverage and their current integration state.</p>
+          <p className='panel-copy'>Condition of every correspondence line feeding the dispatch desk.</p>
           <ul className='source-list'>
             {sources?.sources.map((source) => (
               <li key={source.sourceId} className='source-row'>
@@ -178,8 +189,9 @@ function App() {
         </article>
 
         <article className='panel'>
+          <p className='section-kicker'>Latest Intelligence</p>
           <h2>Dispatch Feed</h2>
-          <p className='panel-copy'>Recent events from connected sources, sorted by publication time.</p>
+          <p className='panel-copy'>Newest reports from connected sources, filed by publication time.</p>
           <ul className='feed-list'>
             {feed?.items.map((item) => (
               <li key={item.id} className='feed-item'>
@@ -190,7 +202,7 @@ function App() {
                 <VideoPlayer item={item} />
                 <h3>{item.title}</h3>
                 <p>{item.summary}</p>
-                <a href={item.url} target='_blank' rel='noreferrer'>View source</a>
+                <a href={item.url} target='_blank' rel='noreferrer'>Read original dispatch</a>
               </li>
             ))}
             {feed?.items.length === 0 && <li className='feed-item'>No feed items yet.</li>}
