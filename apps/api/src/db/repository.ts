@@ -2,6 +2,7 @@ import type { DispatchItem } from '@inkengine/contracts'
 import { and, desc, eq, lt, or, sql } from 'drizzle-orm'
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import { isAllowedDispatchItem } from '../moderation.js'
 import * as schema from './schema.js'
 
 export type FeedPage = {
@@ -53,7 +54,7 @@ export class MemoryPostRepository implements PostRepository {
 
   async listPosts(limit: number, cursor?: string): Promise<FeedPage> {
     const decoded = cursor ? decodeCursor(cursor) : null
-    const sorted = [...this.posts.values()].sort(compareItems)
+    const sorted = [...this.posts.values()].filter(isAllowedDispatchItem).sort(compareItems)
     const start = decoded
       ? sorted.findIndex((item) => item.publishedAt === decoded.publishedAt && item.id === decoded.id) + 1
       : 0
@@ -142,7 +143,7 @@ export class PostgresPostRepository implements PostRepository {
           publishedAt: row.publishedAt.toISOString(),
           tags: row.tags,
         }
-      }),
+      }).filter(isAllowedDispatchItem),
       nextCursor: hasMore && last
         ? encodeCursor({ publishedAt: last.publishedAt.toISOString(), id: last.id })
         : null,

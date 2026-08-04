@@ -37,6 +37,24 @@ describe('post repository', () => {
     expect(page.items[0]?.title).toBe('Updated title')
   })
 
+  it('hides previously stored blocked posts', async () => {
+    const repository = new MemoryPostRepository()
+    await repository.upsertPosts([
+      createItem('normal', '2026-08-03T12:00:00.000Z'),
+      {
+        ...createItem('blocked', '2026-08-03T13:00:00.000Z'),
+        title: 'Free cheat menu',
+      },
+      {
+        ...createItem('youtube-sample', '2026-08-03T14:00:00.000Z'),
+        sourceId: 'youtube',
+      },
+    ])
+
+    const page = await repository.listPosts(10)
+    expect(page.items.map((item) => item.id)).toEqual(['normal'])
+  })
+
   it('paginates newest-first without duplicates', async () => {
     const repository = new MemoryPostRepository()
     await repository.upsertPosts([

@@ -1,4 +1,5 @@
 import type { DispatchItem } from '@inkengine/contracts'
+import { isAllowedDispatchItem } from '../moderation.js'
 import type { SourceAdapter } from './types.js'
 
 type YouTubeSearchItem = {
@@ -77,7 +78,7 @@ export function createYouTubeAdapter(options: YouTubeAdapterOptions = {}): Sourc
           ?? snippet.thumbnails?.medium?.url
           ?? snippet.thumbnails?.default?.url
 
-        return [{
+        const dispatchItem: DispatchItem = {
           id: videoId,
           sourceId: 'youtube',
           title: snippet.title,
@@ -87,7 +88,9 @@ export function createYouTubeAdapter(options: YouTubeAdapterOptions = {}): Sourc
           embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
           publishedAt: new Date(snippet.publishedAt).toISOString(),
           tags: ['video', 'war-of-rights'],
-        }]
+        }
+
+        return isAllowedDispatchItem(dispatchItem) ? [dispatchItem] : []
       })
     },
   }

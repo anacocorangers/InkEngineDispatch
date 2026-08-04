@@ -4,15 +4,25 @@ import { createYouTubeAdapter } from '../src/adapters/youtube.js'
 describe('YouTube adapter', () => {
   it('maps embeddable search results into dispatch videos', async () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
-      items: [{
-        id: { videoId: 'video-123' },
-        snippet: {
-          title: 'War of Rights Event',
-          description: 'A community battle.',
-          publishedAt: '2026-08-02T18:00:00Z',
-          thumbnails: { high: { url: 'https://i.ytimg.com/vi/video-123/hqdefault.jpg' } },
+      items: [
+        {
+          id: { videoId: 'video-123' },
+          snippet: {
+            title: 'War of Rights Event',
+            description: 'A community battle.',
+            publishedAt: '2026-08-02T18:00:00Z',
+            thumbnails: { high: { url: 'https://i.ytimg.com/vi/video-123/hqdefault.jpg' } },
+          },
         },
-      }],
+        {
+          id: { videoId: 'blocked-video' },
+          snippet: {
+            title: 'Free War of Rights cheat menu',
+            description: 'Download this hack.',
+            publishedAt: '2026-08-02T19:00:00Z',
+          },
+        },
+      ],
     }), { status: 200 }))
     const adapter = createYouTubeAdapter({ apiKey: 'test-key', fetchImpl })
 
