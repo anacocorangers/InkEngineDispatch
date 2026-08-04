@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process'
 
 function printUsage() {
   console.log(`Usage:
-  npm run media:publish -- <input.mp4> <video-id> <gcs-prefix>
+  npm run media:package -- <input.mp4> <video-id> <gcs-prefix>
 
 Arguments:
   <input.mp4>    Source MP4 file to package.
@@ -16,7 +16,7 @@ Arguments:
   <gcs-prefix>   GCS prefix such as gs://inkengine-dispatch-media/videos.
 
 Example:
-  npm run media:publish -- ./input.mp4 P4CVavsbo6w gs://inkengine-dispatch-media/videos
+  npm run media:package -- ./input.mp4 P4CVavsbo6w gs://inkengine-dispatch-media/videos
 `)
 }
 

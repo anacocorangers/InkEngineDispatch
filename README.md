@@ -116,6 +116,20 @@ ffmpeg -i input.mp4 \
 	720p.m3u8
 ```
 
+Publish a clip and update the feed in one command:
+
+```sh
+npm run media:publish -- ./input.mp4 hosted-clip-1 ./clip.json gs://inkengine-dispatch-media/videos
+```
+
+The `clip.json` file should contain `title`, `summary`, `url`, `thumbnailUrl`, `publishedAt`, and `tags`.
+
+If you only want the HLS bundle without updating the feed, use:
+
+```sh
+npm run media:package -- ./input.mp4 hosted-clip-1 gs://inkengine-dispatch-media/videos
+```
+
 Upload the manifest set to GCS:
 
 ```sh
@@ -130,19 +144,15 @@ INKENGINE_MEDIA_FEED_URL=https://storage.googleapis.com/inkengine-dispatch-media
 
 The feed item format is a JSON array or object with an `items` array. Each item should include `id`, `title`, `summary`, `url`, `thumbnailUrl`, `playbackUrl`, `publishedAt`, and `tags`.
 
-To automate the packaging/upload step from the repo root, run:
-
-```sh
-npm run media:publish -- ./input.mp4 <video-id> gs://inkengine-dispatch-media/videos
-```
-
-The script expects `ffmpeg` and `gsutil` to be available on your `PATH`.
+The publisher expects `ffmpeg` and `gsutil` to be available on your `PATH`.
 
 On Windows, you can use the wrapper instead:
 
 ```bat
-scripts\publish-hls.cmd .\input.mp4 <video-id> gs://inkengine-dispatch-media/videos
+scripts\publish-media.cmd .\input.mp4 hosted-clip-1 .\clip.json gs://inkengine-dispatch-media/videos
 ```
+
+If you only need HLS packaging, use `scripts\publish-hls.cmd`.
 
 Set `INKENGINE_MEDIA_FEED_TOKEN` if your feed requires a bearer token.
 

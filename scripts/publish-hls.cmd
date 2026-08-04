@@ -3,7 +3,7 @@ setlocal
 
 if "%~1"=="" goto :usage
 
-npm run media:publish -- %*
+npm run media:package -- %*
 exit /b %errorlevel%
 
 :usage
