@@ -17,9 +17,13 @@ function hasWarOfRightsMarker(item: DispatchItem) {
 }
 
 export function isAllowedDispatchItem(item: DispatchItem) {
-  if (item.sourceId === 'youtube' && item.id === 'youtube-sample') return false
+  if (item.id.endsWith('-sample')) return false
 
-  if (item.sourceId === 'youtube' || item.sourceId === 'media') {
+  if (item.sourceId === 'youtube') {
+    if (!warOfRightsPattern.test(`${item.title}\n${item.summary}`)) return false
+  }
+
+  if (item.sourceId === 'media') {
     if (!hasWarOfRightsMarker(item)) return false
   }
 

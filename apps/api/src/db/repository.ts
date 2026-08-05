@@ -1,5 +1,5 @@
-import type { DispatchItem } from '@inkengine/contracts'
-import { and, desc, eq, lt, or, sql } from 'drizzle-orm'
+import { sourceIdSchema, type DispatchItem } from '@inkengine/contracts'
+import { and, desc, eq, lt, notInArray, or, sql } from 'drizzle-orm'
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { isAllowedDispatchItem } from '../moderation.js'
@@ -13,6 +13,7 @@ export type FeedPage = {
 export interface PostRepository {
   readonly storage: 'memory' | 'postgres'
   upsertPosts(items: DispatchItem[]): Promise<void>
+  removeStaleLivePosts(sourceId: DispatchItem['sourceId'], activeIds: string[]): Promise<void>
   listPosts(limit: number, cursor?: string): Promise<FeedPage>
 }
 
@@ -52,9 +53,20 @@ export class MemoryPostRepository implements PostRepository {
     }
   }
 
+  async removeStaleLivePosts(sourceId: DispatchItem['sourceId'], activeIds: string[]) {
+    const activeIdSet = new Set(activeIds)
+    for (const [key, item] of this.posts) {
+      if (item.sourceId === sourceId && item.tags.includes('live') && !activeIdSet.has(item.id)) {
+        this.posts.delete(key)
+      }
+    }
+  }
+
   async listPosts(limit: number, cursor?: string): Promise<FeedPage> {
     const decoded = cursor ? decodeCursor(cursor) : null
-    const sorted = [...this.posts.values()].filter(isAllowedDispatchItem).sort(compareItems)
+    const sorted = [...this.posts.values()]
+      .filter((item) => sourceIdSchema.safeParse(item.sourceId).success && isAllowedDispatchItem(item))
+      .sort(compareItems)
     const start = decoded
       ? sorted.findIndex((item) => item.publishedAt === decoded.publishedAt && item.id === decoded.id) + 1
       : 0
@@ -106,6 +118,15 @@ export class PostgresPostRepository implements PostRepository {
       })
   }
 
+  async removeStaleLivePosts(sourceId: DispatchItem['sourceId'], activeIds: string[]) {
+    const conditions = [
+      eq(schema.posts.sourceId, sourceId),
+      sql`${schema.posts.tags} @> '["live"]'::jsonb`,
+    ]
+    if (activeIds.length > 0) conditions.push(notInArray(schema.posts.externalId, activeIds))
+    await this.db.delete(schema.posts).where(and(...conditions))
+  }
+
   async listPosts(limit: number, cursor?: string): Promise<FeedPage> {
     const decoded = cursor ? decodeCursor(cursor) : null
     const cursorDate = decoded ? new Date(decoded.publishedAt) : null
@@ -125,7 +146,9 @@ export class PostgresPostRepository implements PostRepository {
     const last = selected.at(-1)
 
     return {
-      items: selected.map((row) => {
+      items: selected.flatMap((row): DispatchItem[] => {
+        const sourceId = sourceIdSchema.safeParse(row.sourceId)
+        if (!sourceId.success) return []
         const rawPayload = row.rawPayload as Partial<DispatchItem> | null
         const storedMedia = {
           thumbnailUrl: rawPayload?.thumbnailUrl,
@@ -139,9 +162,9 @@ export class PostgresPostRepository implements PostRepository {
             }
           : {}
 
-        return {
+        const item: DispatchItem = {
           id: row.externalId,
-          sourceId: row.sourceId as DispatchItem['sourceId'],
+          sourceId: sourceId.data,
           title: row.title,
           summary: row.summary,
           url: row.url,
@@ -150,7 +173,8 @@ export class PostgresPostRepository implements PostRepository {
           publishedAt: row.publishedAt.toISOString(),
           tags: row.tags,
         }
-      }).filter(isAllowedDispatchItem),
+        return isAllowedDispatchItem(item) ? [item] : []
+      }),
       nextCursor: hasMore && last
         ? encodeCursor({ publishedAt: last.publishedAt.toISOString(), id: last.id })
         : null,

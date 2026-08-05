@@ -1,14 +1,31 @@
 import { describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
-import type { DispatchItem } from '@inkengine/contracts'
+import { SOURCE_DEFINITIONS, type DispatchItem } from '@inkengine/contracts'
 import App from './App'
-import { buildYouTubeEmbedUrl, isHlsManifestUrl } from './youtube'
-import { compareDispatchItems, isPlayableDispatchItem } from './relevance'
+import { buildEmbedUrl, buildYouTubeEmbedUrl, isHlsManifestUrl } from './youtube'
+import {
+  compareDispatchItems,
+  dedupeDispatchItems,
+  getSourceLabel,
+  getVideoPosterUrl,
+  isArticleDispatchItem,
+  isLiveDispatchItem,
+  isPlayableDispatchItem,
+  isVideoDispatchItem,
+  sourceLabels,
+} from './relevance'
 
 describe('App', () => {
   it('renders the dispatch title', () => {
     const html = renderToString(<App />)
     expect(html).toContain('Dispatch.<wbr/>InkEngine.<wbr/>Live')
+    expect(html).not.toContain('All dispatches')
+    expect(html).toContain('Live now')
+  })
+
+  it('has a health-panel label for every registered source', () => {
+    expect(Object.keys(sourceLabels)).toHaveLength(SOURCE_DEFINITIONS.length)
+    expect(SOURCE_DEFINITIONS.every((source) => sourceLabels[source.id] === source.label)).toBe(true)
   })
 
   it('builds a YouTube embed URL with the hosting origin', () => {
@@ -29,7 +46,18 @@ describe('App', () => {
     expect(isHlsManifestUrl('https://storage.googleapis.com/dispatch/videos/video.mp4')).toBe(false)
   })
 
-  it('separates playable videos from articles', () => {
+  it('builds a Twitch embed URL with its required parent host', () => {
+    const url = new URL(buildEmbedUrl(
+      'https://player.twitch.tv/?channel=example_regiment',
+      'https://dispatch.inkengine.live',
+    ))
+
+    expect(url.searchParams.get('channel')).toBe('example_regiment')
+    expect(url.searchParams.get('parent')).toBe('dispatch.inkengine.live')
+    expect(url.searchParams.get('autoplay')).toBe('true')
+  })
+
+  it('keeps Steam reports with video in both content tabs', () => {
     const video: DispatchItem = {
       id: 'steam-video',
       sourceId: 'steam',
@@ -51,7 +79,110 @@ describe('App', () => {
     }
 
     expect(isPlayableDispatchItem(video)).toBe(true)
+    expect(isArticleDispatchItem(video)).toBe(true)
     expect(isPlayableDispatchItem(article)).toBe(false)
+    expect(isArticleDispatchItem(article)).toBe(true)
+    expect(getSourceLabel(video)).toBe('Official Steam Update')
+    expect(getVideoPosterUrl(video)).toBe('https://i.ytimg.com/vi/DgUNMYK8WMs/maxresdefault.jpg')
+  })
+
+  it('keeps the source thumbnail for non-YouTube video', () => {
+    const video: DispatchItem = {
+      id: 'hosted-video',
+      sourceId: 'media',
+      title: 'Hosted report',
+      summary: 'A hosted video report.',
+      url: 'https://example.com/report',
+      thumbnailUrl: 'https://example.com/poster.jpg',
+      playbackUrl: 'https://example.com/master.m3u8',
+      publishedAt: '2026-08-03T01:00:00.000Z',
+      tags: ['video', 'war-of-rights'],
+    }
+
+    expect(getVideoPosterUrl(video)).toBe(video.thumbnailUrl)
+  })
+
+  it('shows only playable live-tagged items in the live tab', () => {
+    const liveStream: DispatchItem = {
+      id: 'live-stream',
+      sourceId: 'twitch',
+      title: 'War of Rights live battle',
+      summary: 'Streaming now.',
+      url: 'https://www.twitch.tv/example_regiment',
+      thumbnailUrl: 'https://static-cdn.jtvnw.net/preview.jpg',
+      embedUrl: 'https://player.twitch.tv/?channel=example_regiment',
+      publishedAt: '2026-08-03T01:00:00.000Z',
+      tags: ['twitch', 'live', 'video', 'war-of-rights'],
+    }
+
+    expect(isLiveDispatchItem(liveStream)).toBe(true)
+    expect(isVideoDispatchItem(liveStream)).toBe(false)
+    expect(isLiveDispatchItem({ ...liveStream, tags: ['video', 'war-of-rights'] })).toBe(false)
+    expect(isVideoDispatchItem({ ...liveStream, tags: ['video', 'war-of-rights'] })).toBe(true)
+    expect(isLiveDispatchItem({ ...liveStream, thumbnailUrl: undefined, embedUrl: undefined })).toBe(false)
+  })
+
+  it('prefers an official Steam report over a duplicate YouTube item', () => {
+    const steam: DispatchItem = {
+      id: 'steam-report',
+      sourceId: 'steam',
+      title: 'Official update',
+      summary: 'War of Rights update.',
+      url: 'https://store.steampowered.com/news/app/424030/view/1',
+      thumbnailUrl: 'https://example.com/poster.jpg',
+      embedUrl: 'https://www.youtube-nocookie.com/embed/DgUNMYK8WMs',
+      publishedAt: '2026-08-03T01:00:00.000Z',
+      tags: ['steam', 'video', 'war-of-rights'],
+    }
+    const youtube: DispatchItem = {
+      ...steam,
+      id: 'DgUNMYK8WMs',
+      sourceId: 'youtube',
+      url: 'https://www.youtube.com/watch?v=DgUNMYK8WMs',
+    }
+
+    expect(dedupeDispatchItems([youtube, steam])).toEqual([steam])
+    expect(getSourceLabel(youtube)).toBe('Community Video')
+  })
+
+  it('prefers a Reddit discussion over a duplicate direct YouTube item', () => {
+    const reddit: DispatchItem = {
+      id: 'reddit-report',
+      sourceId: 'reddit',
+      title: 'Community analysis',
+      summary: 'War of Rights discussion.',
+      url: 'https://www.reddit.com/r/WarOfRights/comments/report/',
+      thumbnailUrl: 'https://example.com/poster.jpg',
+      embedUrl: 'https://www.youtube-nocookie.com/embed/DgUNMYK8WMs',
+      publishedAt: '2026-08-03T01:00:00.000Z',
+      tags: ['reddit', 'community', 'video', 'war-of-rights'],
+    }
+    const youtube: DispatchItem = {
+      ...reddit,
+      id: 'DgUNMYK8WMs',
+      sourceId: 'youtube',
+      url: 'https://www.youtube.com/watch?v=DgUNMYK8WMs',
+    }
+
+    expect(dedupeDispatchItems([youtube, reddit])).toEqual([reddit])
+    expect(isPlayableDispatchItem(reddit)).toBe(true)
+    expect(isArticleDispatchItem(reddit)).toBe(false)
+    expect(getSourceLabel(reddit)).toBe('Reddit Community')
+  })
+
+  it('keeps non-video Reddit posts in the article tab', () => {
+    const redditArticle: DispatchItem = {
+      id: 'reddit-article',
+      sourceId: 'reddit',
+      title: 'Community campaign report',
+      summary: 'A written War of Rights discussion.',
+      url: 'https://www.reddit.com/r/WarOfRights/comments/article/',
+      publishedAt: '2026-08-03T01:00:00.000Z',
+      tags: ['reddit', 'community', 'war-of-rights'],
+    }
+
+    expect(isPlayableDispatchItem(redditArticle)).toBe(false)
+    expect(isArticleDispatchItem(redditArticle)).toBe(true)
   })
 
   it('ranks War of Rights items ahead of generic bannerlord clips', () => {

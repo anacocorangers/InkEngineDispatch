@@ -1,13 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Hls from 'hls.js'
 import type { DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
-import { buildYouTubeEmbedUrl, isHlsManifestUrl } from './youtube'
-import { compareDispatchItems, isPlayableDispatchItem } from './relevance'
+import { buildEmbedUrl, isHlsManifestUrl } from './youtube'
+import {
+  compareDispatchItems,
+  dedupeDispatchItems,
+  getSourceLabel,
+  getVideoPosterUrl,
+  isArticleDispatchItem,
+  isLiveDispatchItem,
+  isVideoDispatchItem,
+  sourceLabels,
+} from './relevance'
 import './Dispatch.css'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
-type FeedFilter = 'all' | 'videos' | 'articles'
-
+const showDeveloperHealth = import.meta.env.DEV
+type FeedFilter = 'live' | 'videos' | 'articles'
 function apiUrl(path: string) {
   return `${apiBaseUrl}${path}`
 }
@@ -16,6 +25,7 @@ function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: b
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [mediaError, setMediaError] = useState<string | null>(null)
   const embedUrl = item.embedUrl
+  const posterUrl = getVideoPosterUrl(item)
 
   useEffect(() => {
     if (!playing || !item.playbackUrl || !videoRef.current) return
@@ -55,7 +65,7 @@ function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: b
     return stopPlayback
   }, [item.playbackUrl, playing])
 
-  if ((!item.playbackUrl && !embedUrl) || !item.thumbnailUrl) return null
+  if ((!item.playbackUrl && !embedUrl) || !posterUrl) return null
 
   return (
     <div className='video-player'>
@@ -80,7 +90,7 @@ function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: b
           : playing && embedUrl
           ? (
               <iframe
-                src={buildYouTubeEmbedUrl(embedUrl, window.location.origin)}
+                src={buildEmbedUrl(embedUrl, window.location.origin)}
                 title={item.title}
                 allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
                 referrerPolicy='strict-origin-when-cross-origin'
@@ -89,7 +99,18 @@ function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: b
             )
           : (
               <button type='button' className='video-poster' onClick={onPlay} aria-label={`Play ${item.title}`}>
-                <img src={item.thumbnailUrl} alt='' loading='lazy' />
+                <img
+                  src={posterUrl}
+                  alt=''
+                  loading='lazy'
+                  data-fallback-src={posterUrl !== item.thumbnailUrl ? item.thumbnailUrl : undefined}
+                  onError={(event) => {
+                    const fallbackUrl = event.currentTarget.dataset.fallbackSrc
+                    if (!fallbackUrl) return
+                    delete event.currentTarget.dataset.fallbackSrc
+                    event.currentTarget.src = fallbackUrl
+                  }}
+                />
                 <span className='play-control' aria-hidden='true' />
               </button>
             )}
@@ -113,49 +134,52 @@ function App() {
   const [feed, setFeed] = useState<FeedResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [playingItemId, setPlayingItemId] = useState<string | null>(null)
-  const [feedFilter, setFeedFilter] = useState<FeedFilter>('all')
+  const [feedFilter, setFeedFilter] = useState<FeedFilter>('live')
+
+  async function loadData(forceRefresh = false) {
+    if (forceRefresh) setRefreshing(true)
+    else setLoading(true)
+    setError(null)
+    try {
+      if (forceRefresh) {
+        const response = await fetch(apiUrl('/api/refresh'), { method: 'POST' })
+        if (!response.ok) throw new Error('Unable to refresh dispatch sources.')
+        const payload = await response.json() as { feed: FeedResponse; sources: SourceResponse }
+        setFeed(payload.feed)
+        setSources(payload.sources)
+        return
+      }
+
+      const feedResponse = await fetch(apiUrl('/api/feed?limit=100'))
+      if (!feedResponse.ok) throw new Error('Unable to load dispatch feed.')
+      const feedJson = await feedResponse.json() as FeedResponse
+      const sourcesResponse = await fetch(apiUrl('/api/sources'))
+      if (!sourcesResponse.ok) throw new Error('Unable to load source health.')
+      setFeed(feedJson)
+      setSources(await sourcesResponse.json() as SourceResponse)
+    }
+    catch {
+      setError('Dispatch sources could not be reached. Cached reports remain available when possible.')
+    }
+    finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
 
   useEffect(() => {
     let active = true
 
-    async function loadData() {
-      setLoading(true)
-      setError(null)
-      try {
-        const [sourcesResponse, feedResponse] = await Promise.all([
-          fetch(apiUrl('/api/sources')),
-          fetch(apiUrl('/api/feed?limit=100')),
-        ])
-
-        if (!sourcesResponse.ok || !feedResponse.ok) {
-          throw new Error('Unable to load dispatch data from API.')
-        }
-
-        const [sourcesJson, feedJson] = await Promise.all([
-          sourcesResponse.json() as Promise<SourceResponse>,
-          feedResponse.json() as Promise<FeedResponse>,
-        ])
-
-        if (!active) return
-        setSources(sourcesJson)
-        setFeed(feedJson)
-      }
-      catch {
-        if (active) {
-          setError('Dispatch API is offline. Start apps/api and refresh.')
-        }
-      }
-      finally {
-        if (active) {
-          setLoading(false)
-        }
-      }
+    async function refreshData() {
+      if (!active) return
+      await loadData()
     }
 
-    loadData()
-    const timer = window.setInterval(loadData, 30_000)
+    void refreshData()
+    const timer = window.setInterval(refreshData, 30_000)
     return () => {
       active = false
       window.clearInterval(timer)
@@ -197,16 +221,26 @@ function App() {
     )
   }, [sources])
 
-  const rankedFeedItems = useMemo(() => {
+  const visibleSources = useMemo(
+    () => sources?.sources ?? [],
+    [sources],
+  )
+
+  const curatedFeedItems = useMemo(() => {
     if (!feed) return []
-    return [...feed.items]
+    return dedupeDispatchItems(feed.items)
+  }, [feed])
+
+  const rankedFeedItems = useMemo(() => {
+    return curatedFeedItems
       .filter((item) => {
-        if (feedFilter === 'videos') return isPlayableDispatchItem(item)
-        if (feedFilter === 'articles') return !isPlayableDispatchItem(item)
+        if (feedFilter === 'live') return isLiveDispatchItem(item)
+        if (feedFilter === 'videos') return isVideoDispatchItem(item)
+        if (feedFilter === 'articles') return isArticleDispatchItem(item)
         return true
       })
       .sort(compareDispatchItems)
-  }, [feed, feedFilter])
+  }, [curatedFeedItems, feedFilter])
 
   return (
     <main className='dispatch-shell'>
@@ -236,64 +270,90 @@ function App() {
         </div>
       </header>
 
-      <section className='metrics-row'>
-        <article>
-          <span>Healthy</span>
-          <strong>{sourceHealth.ok}</strong>
-        </article>
-        <article>
-          <span>Degraded</span>
-          <strong>{sourceHealth.degraded}</strong>
-        </article>
-        <article>
-          <span>Auth Required</span>
-          <strong>{sourceHealth.auth}</strong>
-        </article>
-        <article>
-          <span>Feed Items</span>
-          <strong>{feed?.items.length ?? 0}</strong>
-        </article>
-      </section>
+      {showDeveloperHealth && (
+        <section className='metrics-row'>
+          <article>
+            <span>Healthy</span>
+            <strong>{sourceHealth.ok}</strong>
+          </article>
+          <article>
+            <span>Degraded</span>
+            <strong>{sourceHealth.degraded}</strong>
+          </article>
+          <article>
+            <span>Auth Required</span>
+            <strong>{sourceHealth.auth}</strong>
+          </article>
+          <article>
+            <span>Feed Items</span>
+            <strong>{curatedFeedItems.length}</strong>
+          </article>
+        </section>
+      )}
 
       {error && <p className='error-banner'>{error}</p>}
 
-      <section className='panel-grid'>
-        <article className='panel'>
-          <p className='section-kicker'>Signal Office</p>
-          <h2>Source Readiness</h2>
-          <p className='panel-copy'>Condition of every correspondence line feeding the dispatch desk.</p>
-          <ul className='source-list'>
-            {sources?.sources.map((source) => (
-              <li key={source.sourceId} className='source-row'>
-                <div>
-                  <strong>{source.sourceId}</strong>
-                  <small>{source.message}</small>
-                </div>
-                <span className={`status-pill ${source.state}`}>{source.state}</span>
-              </li>
-            ))}
-            {!sources && <li className='source-row'>Loading source status...</li>}
-          </ul>
-        </article>
+      <section className={`panel-grid${showDeveloperHealth ? '' : ' feed-only'}`}>
+        {showDeveloperHealth && (
+          <article className='panel'>
+            <div className='signal-heading'>
+              <p className='section-kicker'>Signal Office</p>
+              <button
+                className='refresh-button'
+                type='button'
+                onClick={() => void loadData(true)}
+                disabled={refreshing}
+                title='Refresh all dispatch sources'
+              >
+                <span aria-hidden='true'>↻</span>
+                {refreshing ? 'Refreshing' : 'Refresh'}
+              </button>
+            </div>
+            <h2>Source Readiness</h2>
+            <p className='panel-copy'>Live condition, yield, and retry schedule for active correspondence lines.</p>
+            <ul className='source-list'>
+              {visibleSources.map((source) => (
+                <li key={source.sourceId} className='source-row'>
+                  <div>
+                    <strong>{sourceLabels[source.sourceId] ?? source.sourceId}</strong>
+                    <small>{source.message}</small>
+                    <dl className='source-facts'>
+                      <div><dt>Reports</dt><dd>{source.itemCount}</dd></div>
+                      <div>
+                        <dt>Last success</dt>
+                        <dd>{source.lastSuccessfulSync ? new Date(source.lastSuccessfulSync).toLocaleString() : 'Not yet'}</dd>
+                      </div>
+                      {source.nextRetryAt && (
+                        <div><dt>Retry</dt><dd>{new Date(source.nextRetryAt).toLocaleTimeString()}</dd></div>
+                      )}
+                    </dl>
+                  </div>
+                  <span className={`status-pill ${source.state}`}>{source.state}</span>
+                </li>
+              ))}
+              {!sources && <li className='source-row'>Loading source status...</li>}
+            </ul>
+          </article>
+        )}
 
         <article className='panel'>
           <p className='section-kicker'>Latest Intelligence</p>
           <h2>Dispatch Feed</h2>
           <p className='panel-copy'>Newest reports from connected sources, filed by publication time.</p>
           <div className='feed-filters' role='tablist' aria-label='Choose dispatch content type'>
-            {(['all', 'videos', 'articles'] as const).map((filter) => (
+            {(['live', 'videos', 'articles'] as const).map((filter) => (
               <button
                 key={filter}
                 type='button'
                 role='tab'
                 aria-selected={feedFilter === filter}
-                className={feedFilter === filter ? 'active' : undefined}
+                className={`${feedFilter === filter ? 'active' : ''}${filter === 'live' ? ' live-tab' : ''}`.trim() || undefined}
                 onClick={() => {
                   setFeedFilter(filter)
                   setPlayingItemId(null)
                 }}
               >
-                {filter === 'all' ? 'All dispatches' : filter === 'videos' ? 'Watch videos' : 'Read articles'}
+                {filter === 'live' ? 'Live now' : filter === 'videos' ? 'Watch videos' : 'Read articles'}
               </button>
             ))}
           </div>
@@ -301,18 +361,22 @@ function App() {
             {rankedFeedItems.map((item) => (
               <li key={item.id} className='feed-item'>
                 <div className='feed-head'>
-                  <span className='source-tag'>{item.sourceId}</span>
+                  <span className={`source-tag source-${item.sourceId}`}>{getSourceLabel(item)}</span>
                   <time>{new Date(item.publishedAt).toLocaleString()}</time>
                 </div>
                 <VideoPlayer item={item} playing={playingItemId === item.id} onPlay={() => setPlayingItemId(item.id)} />
                 <h3>{item.title}</h3>
                 <p>{item.summary}</p>
-                <a href={item.url} target='_blank' rel='noreferrer'>Read original dispatch</a>
+                <a href={item.url} target='_blank' rel='noreferrer'>
+                  {isLiveDispatchItem(item) ? 'Open original stream' : 'Read original dispatch'}
+                </a>
               </li>
             ))}
             {feed?.items.length === 0 && <li className='feed-item'>No feed items yet.</li>}
             {feed && feed.items.length > 0 && rankedFeedItems.length === 0 && (
-              <li className='feed-item'>No {feedFilter} are available yet.</li>
+              <li className='feed-item'>
+                {feedFilter === 'live' ? 'No War of Rights streams are live right now.' : `No ${feedFilter} are available yet.`}
+              </li>
             )}
           </ul>
           {feed?.nextCursor && (

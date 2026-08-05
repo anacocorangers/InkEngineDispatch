@@ -3,6 +3,20 @@ import type { DispatchItem } from '@inkengine/contracts'
 import { isAllowedDispatchItem } from '../src/moderation.js'
 
 describe('moderation', () => {
+  it('rejects stale sample items from every source', () => {
+    const item = {
+      id: 'steam-sample',
+      sourceId: 'steam',
+      title: 'Steam adapter stub ready',
+      summary: 'Sample payload.',
+      url: 'https://example.com',
+      publishedAt: '2026-08-03T00:00:00.000Z',
+      tags: ['steam'],
+    } as DispatchItem
+
+    expect(isAllowedDispatchItem(item)).toBe(false)
+  })
+
   it('rejects non-War of Rights video items', () => {
     const item = {
       id: 'clip-1',
@@ -12,6 +26,20 @@ describe('moderation', () => {
       url: 'https://example.com',
       publishedAt: '2026-08-03T00:00:00.000Z',
       tags: ['video'],
+    } as DispatchItem
+
+    expect(isAllowedDispatchItem(item)).toBe(false)
+  })
+
+  it('does not trust an adapter-assigned War of Rights tag', () => {
+    const item = {
+      id: 'bannerlord',
+      sourceId: 'youtube',
+      title: 'Bannerlord War Sails',
+      summary: 'A video about another game.',
+      url: 'https://example.com',
+      publishedAt: '2026-08-03T00:00:00.000Z',
+      tags: ['video', 'war-of-rights'],
     } as DispatchItem
 
     expect(isAllowedDispatchItem(item)).toBe(false)

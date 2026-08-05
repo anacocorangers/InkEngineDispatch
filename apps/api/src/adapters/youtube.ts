@@ -8,6 +8,7 @@ type YouTubeSearchItem = {
     title?: string
     description?: string
     publishedAt?: string
+    liveBroadcastContent?: 'live' | 'none' | 'upcoming'
     thumbnails?: {
       high?: { url?: string }
       medium?: { url?: string }
@@ -24,6 +25,8 @@ type YouTubeAdapterOptions = {
   apiKey?: string
   fetchImpl?: typeof fetch
   refreshIntervalMs?: number
+  liveRefreshIntervalMs?: number
+  recentRefreshIntervalMs?: number
 }
 
 function sampleItem(nowIso: string): DispatchItem {
@@ -39,7 +42,10 @@ function sampleItem(nowIso: string): DispatchItem {
 }
 
 export function createYouTubeAdapter(options: YouTubeAdapterOptions = {}): SourceAdapter {
-  let lastFetchedAt = 0
+  let lastLiveFetchedAt = 0
+  let lastRecentFetchedAt = 0
+  let cachedLiveItems: DispatchItem[] = []
+  let cachedRecentItems: DispatchItem[] = []
 
   return {
     id: 'youtube',
@@ -48,28 +54,50 @@ export function createYouTubeAdapter(options: YouTubeAdapterOptions = {}): Sourc
       if (!apiKey) return [sampleItem(context.nowIso)]
 
       const now = Date.parse(context.nowIso)
-      const refreshIntervalMs = options.refreshIntervalMs ?? 30 * 60 * 1000
-      if (lastFetchedAt && now - lastFetchedAt < refreshIntervalMs) return []
+      const liveRefreshIntervalMs = options.refreshIntervalMs
+        ?? options.liveRefreshIntervalMs
+        ?? 30 * 60 * 1000
+      const recentRefreshIntervalMs = options.refreshIntervalMs
+        ?? options.recentRefreshIntervalMs
+        ?? 6 * 60 * 60 * 1000
+      const searches: Array<{ kind: 'live' | 'recent'; url: URL }> = []
 
-      const url = new URL('https://www.googleapis.com/youtube/v3/search')
-      url.search = new URLSearchParams({
-        part: 'snippet',
-        q: '"War of Rights"',
-        type: 'video',
-        videoEmbeddable: 'true',
-        order: 'date',
-        maxResults: '12',
-        key: apiKey,
-      }).toString()
-
-      const response = await (options.fetchImpl ?? fetch)(url)
-      if (!response.ok) {
-        throw new Error(`YouTube search failed with status ${response.status}`)
+      if (!lastLiveFetchedAt || now - lastLiveFetchedAt >= liveRefreshIntervalMs) {
+        const url = new URL('https://www.googleapis.com/youtube/v3/search')
+        url.search = new URLSearchParams({
+          part: 'snippet',
+          q: '"War of Rights"',
+          type: 'video',
+          eventType: 'live',
+          videoEmbeddable: 'true',
+          maxResults: '25',
+          key: apiKey,
+        }).toString()
+        searches.push({ kind: 'live', url })
       }
 
-      const payload = await response.json() as YouTubeSearchResponse
-      lastFetchedAt = now
-      return (payload.items ?? []).flatMap((item): DispatchItem[] => {
+      if (!lastRecentFetchedAt || now - lastRecentFetchedAt >= recentRefreshIntervalMs) {
+        const url = new URL('https://www.googleapis.com/youtube/v3/search')
+        url.search = new URLSearchParams({
+          part: 'snippet',
+          q: '"War of Rights"',
+          type: 'video',
+          videoEmbeddable: 'true',
+          order: 'date',
+          maxResults: '12',
+          key: apiKey,
+        }).toString()
+        searches.push({ kind: 'recent', url })
+      }
+
+      const fetchImpl = options.fetchImpl ?? fetch
+      const responses = await Promise.all(searches.map(async (search) => {
+        const response = await fetchImpl(search.url)
+        if (!response.ok) throw new Error(`YouTube ${search.kind} search failed with status ${response.status}`)
+        return { kind: search.kind, payload: await response.json() as YouTubeSearchResponse }
+      }))
+
+      const mapItems = (payload: YouTubeSearchResponse, liveSearch: boolean) => (payload.items ?? []).flatMap((item): DispatchItem[] => {
         const videoId = item.id?.videoId
         const snippet = item.snippet
         if (!videoId || !snippet?.title || !snippet.publishedAt) return []
@@ -87,11 +115,30 @@ export function createYouTubeAdapter(options: YouTubeAdapterOptions = {}): Sourc
           thumbnailUrl,
           embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
           publishedAt: new Date(snippet.publishedAt).toISOString(),
-          tags: ['video', 'war-of-rights'],
+          tags: [
+            'video',
+            'war-of-rights',
+            ...(liveSearch || snippet.liveBroadcastContent === 'live' ? ['live'] : []),
+          ],
         }
 
         return isAllowedDispatchItem(dispatchItem) ? [dispatchItem] : []
       })
+
+      for (const response of responses) {
+        if (response.kind === 'live') {
+          cachedLiveItems = mapItems(response.payload, true)
+          lastLiveFetchedAt = now
+        }
+        else {
+          cachedRecentItems = mapItems(response.payload, false)
+          lastRecentFetchedAt = now
+        }
+      }
+
+      return [...new Map(
+        [...cachedRecentItems, ...cachedLiveItems].map((item) => [item.id, item]),
+      ).values()]
     },
   }
 }

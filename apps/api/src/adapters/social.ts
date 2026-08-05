@@ -10,13 +10,10 @@ function createSocialAdapter(id: SourceId): SourceAdapter {
   }
 }
 
-export const twitchAdapter = createSocialAdapter('twitch')
 export const xAdapter = createSocialAdapter('x')
 export const facebookAdapter = createSocialAdapter('facebook')
 export const instagramAdapter = createSocialAdapter('instagram')
 export const threadsAdapter = createSocialAdapter('threads')
-export const blueskyAdapter = createSocialAdapter('bluesky')
-export const mastodonAdapter = createSocialAdapter('mastodon')
 export const linkedinAdapter = createSocialAdapter('linkedin')
 export const telegramAdapter = createSocialAdapter('telegram')
 export const pinterestAdapter = createSocialAdapter('pinterest')

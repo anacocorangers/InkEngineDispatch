@@ -22,7 +22,7 @@ function stripHtml(value: string): string {
 }
 
 function extractTag(block: string, tagName: string): string | null {
-  const match = block.match(new RegExp(`<${tagName}>([\\s\\S]*?)<\/${tagName}>`, 'i'))
+  const match = block.match(new RegExp(`<${tagName}>([\\s\\S]*?)</${tagName}>`, 'i'))
   if (!match) {
     return null
   }

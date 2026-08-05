@@ -38,6 +38,16 @@ app.get<{ Querystring: { cursor?: string; limit?: string } }>('/api/feed', async
   })
 })
 
+app.post('/api/refresh', async () => {
+  const feed = await buildFeed(new Date(), postRepository, {
+    limit: 100,
+  })
+  return {
+    feed,
+    sources: await buildSourceStatuses(),
+  }
+})
+
 try {
   await app.listen({ host: config.host, port: config.port })
   console.log(`InkEngine Dispatch API listening on http://${config.host}:${config.port}`)

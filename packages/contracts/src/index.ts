@@ -7,14 +7,13 @@ export const sourceIdSchema = z.enum([
   'steam',
   'reddit',
   'official-site',
+  'community-events',
   'discord',
   'tiktok',
   'x',
   'facebook',
   'instagram',
   'threads',
-  'bluesky',
-  'mastodon',
   'linkedin',
   'telegram',
   'pinterest',
@@ -64,7 +63,11 @@ export const sourceStatusSchema = z.object({
   sourceId: sourceIdSchema,
   state: z.enum(['ok', 'degraded', 'auth-required']),
   message: z.string(),
-  lastSync: z.iso.datetime(),
+  lastSync: z.iso.datetime().nullable(),
+  lastSuccessfulSync: z.iso.datetime().nullable().default(null),
+  itemCount: z.number().int().nonnegative().default(0),
+  consecutiveFailures: z.number().int().nonnegative().default(0),
+  nextRetryAt: z.iso.datetime().nullable().default(null),
 })
 
 export type SourceStatus = z.infer<typeof sourceStatusSchema>
@@ -114,6 +117,12 @@ export const SOURCE_DEFINITIONS: SourceDefinition[] = [
     statusNote: 'RSS or page scrape strategy depends on source format.',
   },
   {
+    id: 'community-events',
+    label: 'Community Events',
+    authRequirement: 'optional',
+    statusNote: 'Reads selected regiment and community iCalendar feeds.',
+  },
+  {
     id: 'discord',
     label: 'Discord',
     authRequirement: 'required',
@@ -148,18 +157,6 @@ export const SOURCE_DEFINITIONS: SourceDefinition[] = [
     label: 'Threads',
     authRequirement: 'required',
     statusNote: 'Requires approved Threads API credentials.',
-  },
-  {
-    id: 'bluesky',
-    label: 'Bluesky',
-    authRequirement: 'none',
-    statusNote: 'Public profiles and posts are available through the AT Protocol.',
-  },
-  {
-    id: 'mastodon',
-    label: 'Mastodon',
-    authRequirement: 'none',
-    statusNote: 'Public account timelines are available from the account instance.',
   },
   {
     id: 'linkedin',

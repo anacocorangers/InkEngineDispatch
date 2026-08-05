@@ -55,6 +55,31 @@ describe('post repository', () => {
     expect(page.items.map((item) => item.id)).toEqual(['normal'])
   })
 
+  it('hides archived rows from removed sources', async () => {
+    const repository = new MemoryPostRepository()
+    await repository.upsertPosts([{
+      ...createItem('legacy-source', '2026-08-03T14:00:00.000Z'),
+      sourceId: 'bluesky',
+    } as unknown as DispatchItem])
+
+    const page = await repository.listPosts(10)
+    expect(page.items).toEqual([])
+  })
+
+  it('removes ended live streams without deleting recordings', async () => {
+    const repository = new MemoryPostRepository()
+    await repository.upsertPosts([
+      { ...createItem('ended', '2026-08-03T14:00:00.000Z'), sourceId: 'youtube', title: 'War of Rights ended stream', tags: ['live', 'video', 'war-of-rights'] },
+      { ...createItem('active', '2026-08-03T13:00:00.000Z'), sourceId: 'youtube', title: 'War of Rights active stream', tags: ['live', 'video', 'war-of-rights'] },
+      { ...createItem('recording', '2026-08-03T12:00:00.000Z'), sourceId: 'youtube', title: 'War of Rights recording', tags: ['video', 'war-of-rights'] },
+    ])
+
+    await repository.removeStaleLivePosts('youtube', ['active'])
+
+    const page = await repository.listPosts(10)
+    expect(page.items.map((item) => item.id)).toEqual(['active', 'recording'])
+  })
+
   it('paginates newest-first without duplicates', async () => {
     const repository = new MemoryPostRepository()
     await repository.upsertPosts([

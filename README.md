@@ -10,13 +10,12 @@ InkEngine Dispatch is a sibling project in the InkEngine ecosystem. It tracks of
 
 ## Source Coverage
 
-- YouTube (optional API key), Twitch
+- Official War of Rights news and Steam announcements
+- YouTube (optional API key) and Twitch live streams
+- Selected regiment/community iCalendar feeds
 - Hosted media feed for curated HLS playback
-- Steam News (public endpoint)
 - Reddit (optional OAuth for better limits)
-- Official site RSS/scrape path
 - Discord, TikTok, X, Facebook, Instagram, and Threads
-- Bluesky and Mastodon public APIs
 - LinkedIn, Telegram, Pinterest, Snapchat, and Tumblr
 
 ## Local Development
@@ -59,15 +58,47 @@ npm run db:down
 - `GET /health`
 - `GET /api/sources`
 - `GET /api/feed`
+- `POST /api/refresh`
 
 Feed pagination uses `GET /api/feed?limit=20&cursor=...`. The response includes `nextCursor` and reports whether it came from `memory` or `postgres` storage.
+
+Source status reports the latest attempt and successful refresh times, imported item count, consecutive failures, and scheduled retry. Failed adapters use exponential backoff up to 30 minutes while the repository continues serving last-known-good reports. `POST /api/refresh` starts an immediate refresh of eligible sources but still honors active backoff windows.
 
 ## Notes
 
 - Social adapters are intentionally credential-safe stubs until account targets and approved API credentials are configured. InkEngine Dispatch does not bypass logins, rate limits, or platform access controls.
-- Bluesky and Mastodon support public API collection without credentials once target handles are configured.
+- Discord reads only explicitly configured channels through the official bot API using `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_IDS`.
+- TikTok reads videos authorized through the official Display API using `TIKTOK_ACCESS_TOKEN`; client credentials alone do not grant content access.
+- Twitch requires `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` from a Twitch application.
+- Community events read comma-separated public `.ics` URLs from `COMMUNITY_EVENT_FEED_URLS`.
+- Only explicitly selected community calendars and social accounts are imported; the application does not guess trusted sources.
 - PostgreSQL deduplicates posts by source and external ID. Drizzle migrations live in `apps/api/drizzle`.
 - Shared contracts are published inside the monorepo as the `@inkengine/contracts` workspace package.
+
+### Discord
+
+Create a bot in the Discord Developer Portal, invite it to the target server with **View Channels** and **Read Message History**, then enable Developer Mode in Discord and copy each selected channel ID. Configure Cloud Run without placing the token in source control:
+
+```powershell
+.\scripts\configure-discord.ps1
+```
+
+### Twitch Live Streams
+
+1. Sign in at `https://dev.twitch.tv/console/apps` and register an application.
+2. Use `https://dispatch.inkengine.live` as the OAuth redirect URL and choose **Website Integration** as the category.
+3. Open the application, create a client secret, and keep both values private.
+4. From the repository root, run:
+
+```powershell
+.\scripts\configure-twitch-oauth.ps1
+```
+
+Enter the client ID and client secret only at the secure terminal prompts. The script stores them in Google Secret Manager, grants the Cloud Run runtime account access, and attaches them as `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET`.
+
+For local development, place those two variables in an untracked `.env` file instead. Twitch uses application-only OAuth; no streamer account login or user access token is required. The live feed searches Twitch for channels currently broadcasting War of Rights.
+
+The **Live now** tab combines Twitch, YouTube live broadcasts, and playable hosted media tagged `live`. Other platforms can join the same tab when their adapter emits a playable item with the `live` tag; direct HLS streams can use the hosted media feed.
 
 ## Google Cloud Run
 
@@ -81,6 +112,42 @@ gcloud builds submit \
 ```
 
 Before production deployment, configure `DATABASE_URL` and `INKENGINE_WEB_ORIGIN` through Secret Manager and Cloud Run environment settings. Never commit `.env`.
+
+### Reddit OAuth
+
+Create a Reddit app at `https://www.reddit.com/prefs/apps` using the **script** app type. Set its name to `InkEngine Dispatch`; the redirect URI is required by Reddit but is not used by the application-only flow, so `https://dispatch.inkengine.live` is sufficient.
+
+Store the app ID shown beneath the app name and its secret in Google Secret Manager. Enter the values only in your local terminal, never in chat or source control:
+
+```powershell
+.\scripts\configure-reddit-oauth.ps1
+```
+
+The script prompts privately for both values, creates or updates the secrets, grants the Cloud Run runtime identity access, and deploys the environment binding. The equivalent manual commands are:
+
+```powershell
+gcloud secrets create reddit-client-id --replication-policy=automatic
+$redditClientId = Read-Host 'Reddit client ID'
+$redditClientId | gcloud secrets versions add reddit-client-id --data-file=-
+
+gcloud secrets create reddit-client-secret --replication-policy=automatic
+$redditClientSecret = Read-Host 'Reddit client secret'
+$redditClientSecret | gcloud secrets versions add reddit-client-secret --data-file=-
+```
+
+Grant the Cloud Run runtime service account access, then attach both secrets to the API:
+
+```powershell
+$projectNumber = gcloud projects describe inkeginelive-dispatch --format='value(projectNumber)'
+$runtimeServiceAccount = "$projectNumber-compute@developer.gserviceaccount.com"
+
+gcloud secrets add-iam-policy-binding reddit-client-id --member="serviceAccount:$runtimeServiceAccount" --role='roles/secretmanager.secretAccessor'
+gcloud secrets add-iam-policy-binding reddit-client-secret --member="serviceAccount:$runtimeServiceAccount" --role='roles/secretmanager.secretAccessor'
+
+gcloud run services update inkengine-dispatch-api --project=inkeginelive-dispatch --region=us-east1 --set-secrets='REDDIT_CLIENT_ID=reddit-client-id:latest,REDDIT_CLIENT_SECRET=reddit-client-secret:latest'
+```
+
+The API uses Reddit's application-only OAuth endpoint when `REDDIT_CLIENT_ID` is configured. Without it, the adapter falls back to the public `r/WarOfRights` Atom feed.
 
 Dispatch can also ingest a separate hosted media feed for curated videos you own or are licensed to host. Set `INKENGINE_MEDIA_FEED_URL` to a JSON feed that returns items with `playbackUrl` values pointing at HLS manifests.
 
