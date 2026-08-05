@@ -69,7 +69,26 @@ if ($channelIds -notmatch '^\d{15,22}(,\s*\d{15,22})*$') {
 }
 $channelIds = ($channelIds -split ',' | ForEach-Object { $_.Trim() }) -join ','
 
-Write-Host "Configuration accepted ($(@($channelIds -split ',').Count) channel(s); token: $($botToken.Length) characters)."
+$discordHeaders = @{ Authorization = "Bot $botToken" }
+try {
+    $bot = Invoke-RestMethod -Uri 'https://discord.com/api/v10/users/@me' -Headers $discordHeaders
+}
+catch {
+    throw 'Discord rejected the bot token. Reset and copy the full token from the Developer Portal Bot page.'
+}
+
+foreach ($channelId in $channelIds -split ',') {
+    try {
+        $channel = Invoke-RestMethod -Uri "https://discord.com/api/v10/channels/$channelId" -Headers $discordHeaders
+        Invoke-RestMethod -Uri "https://discord.com/api/v10/channels/$channelId/messages?limit=1" -Headers $discordHeaders | Out-Null
+        Write-Host "Verified read access to #$($channel.name) ($channelId)."
+    }
+    catch {
+        throw "The bot cannot read Discord channel $channelId. Confirm it is installed in that server with View Channel and Read Message History."
+    }
+}
+
+Write-Host "Configuration accepted for $($bot.username) ($(@($channelIds -split ',').Count) channel(s); token: $($botToken.Length) characters)."
 Add-SecretVersion 'discord-bot-token' $botToken
 
 $runtimeServiceAccount = (& $gcloudPath run services describe $Service --project=$Project --region=$Region --format='value(spec.template.spec.serviceAccountName)').Trim()

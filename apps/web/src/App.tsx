@@ -386,6 +386,10 @@ function App() {
           )}
         </article>
       </section>
+      <footer className='site-footer'>
+        <a href='/terms'>Terms</a>
+        <a href='/privacy'>Privacy</a>
+      </footer>
     </main>
   )
 }

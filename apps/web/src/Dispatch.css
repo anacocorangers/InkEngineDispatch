@@ -500,6 +500,20 @@
 
 .refresh-button span { font-size: 1rem; line-height: 1; }
 .refresh-button:hover:not(:disabled) { color: var(--paper); background: var(--navy); }
+
+.site-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.site-footer a { text-underline-offset: 0.2rem; }
 .refresh-button:disabled { cursor: wait; opacity: 0.6; }
 
 .source-row > div { min-width: 0; }

@@ -3,5 +3,9 @@
   "installCommand": "npm install",
   "buildCommand": "npm --workspace @inkengine/contracts run build && npm --workspace @inkengine/web run build",
   "outputDirectory": "apps/web/dist",
-  "framework": "vite"
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/terms", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/index.html" }
+  ]
 }
