@@ -68,6 +68,6 @@ if (-not $runtimeServiceAccount) {
 }
 
 Invoke-Gcloud secrets add-iam-policy-binding $secretName --project=$Project --member="serviceAccount:$runtimeServiceAccount" --role=roles/secretmanager.secretAccessor
-Invoke-Gcloud run services update $Service --project=$Project --region=$Region --set-secrets="TIKTOK_ACCESS_TOKEN=$secretName`:latest"
+Invoke-Gcloud run services update $Service --project=$Project --region=$Region --update-secrets="TIKTOK_ACCESS_TOKEN=$secretName`:latest"
 
 Write-Host 'TikTok Display API access is configured on Cloud Run.'

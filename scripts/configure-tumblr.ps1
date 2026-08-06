@@ -73,6 +73,6 @@ if (-not $runtimeServiceAccount) {
 }
 
 Invoke-Gcloud secrets add-iam-policy-binding $secretName --project=$Project --member="serviceAccount:$runtimeServiceAccount" --role=roles/secretmanager.secretAccessor
-Invoke-Gcloud run services update $Service --project=$Project --region=$Region --set-secrets="TUMBLR_API_KEY=$secretName`:latest" --set-env-vars="TUMBLR_BLOGS=$blogs"
+Invoke-Gcloud run services update $Service --project=$Project --region=$Region --update-secrets="TUMBLR_API_KEY=$secretName`:latest" --update-env-vars="TUMBLR_BLOGS=$blogs"
 
 Write-Host 'Tumblr API access is configured on Cloud Run.'

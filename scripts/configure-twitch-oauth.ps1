@@ -83,6 +83,6 @@ if (-not $runtimeServiceAccount) {
 
 Invoke-Gcloud secrets add-iam-policy-binding twitch-client-id --project=$Project --member="serviceAccount:$runtimeServiceAccount" --role=roles/secretmanager.secretAccessor
 Invoke-Gcloud secrets add-iam-policy-binding twitch-client-secret --project=$Project --member="serviceAccount:$runtimeServiceAccount" --role=roles/secretmanager.secretAccessor
-Invoke-Gcloud run services update $Service --project=$Project --region=$Region --set-secrets='TWITCH_CLIENT_ID=twitch-client-id:latest,TWITCH_CLIENT_SECRET=twitch-client-secret:latest'
+Invoke-Gcloud run services update $Service --project=$Project --region=$Region --update-secrets='TWITCH_CLIENT_ID=twitch-client-id:latest,TWITCH_CLIENT_SECRET=twitch-client-secret:latest'
 
 Write-Host 'Twitch OAuth is configured on Cloud Run.'

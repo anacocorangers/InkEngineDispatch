@@ -83,6 +83,6 @@ if (-not $runtimeServiceAccount) {
 
 Invoke-Gcloud secrets add-iam-policy-binding reddit-client-id --project=$Project --member="serviceAccount:$runtimeServiceAccount" --role=roles/secretmanager.secretAccessor
 Invoke-Gcloud secrets add-iam-policy-binding reddit-client-secret --project=$Project --member="serviceAccount:$runtimeServiceAccount" --role=roles/secretmanager.secretAccessor
-Invoke-Gcloud run services update $Service --project=$Project --region=$Region --set-secrets='REDDIT_CLIENT_ID=reddit-client-id:latest,REDDIT_CLIENT_SECRET=reddit-client-secret:latest'
+Invoke-Gcloud run services update $Service --project=$Project --region=$Region --update-secrets='REDDIT_CLIENT_ID=reddit-client-id:latest,REDDIT_CLIENT_SECRET=reddit-client-secret:latest'
 
 Write-Host 'Reddit OAuth is configured on Cloud Run.'

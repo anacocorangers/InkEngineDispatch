@@ -148,9 +148,17 @@ gcloud builds submit \
 
 Before production deployment, configure `DATABASE_URL` and `INKENGINE_WEB_ORIGIN` through Secret Manager and Cloud Run environment settings. Never commit `.env`.
 
+When binding secrets or env vars with `gcloud run services update`, always use `--update-secrets`/`--update-env-vars` (merges with existing bindings), never `--set-secrets`/`--set-env-vars` (replaces the entire set and silently drops every other source's credentials). All `scripts/configure-*.ps1` files follow this rule.
+
 ### Reddit OAuth
 
 Create a Reddit app at `https://www.reddit.com/prefs/apps` using the **script** app type. Set its name to `InkEngine Dispatch`; the redirect URI is required by Reddit but is not used by the application-only flow, so `https://dispatch.inkengine.live` is sufficient.
+
+Reddit's [Responsible Builder Policy](https://support.reddithelp.com/hc/en-us/articles/42728983564564-Responsible-Builder-Policy) requires apps to state a clear, non-commercial purpose and scope. If an app request is denied for lacking detail, resubmit (or register at `https://developers.reddit.com/app-registration`, Reddit's newer app registration flow) with a description along these lines:
+
+> Non-commercial fan community dashboard for the video game War of Rights. Reads only the public r/WarOfRights subreddit (single subreddit, read-only) to display post titles, links, and timestamps in a community news feed. No posting, voting, commenting, or direct messages. No data resale, redistribution, or AI/ML training use. Complies with Reddit API rate limits.
+
+OAuth only unlocks higher rate limits — it is not required. Without `REDDIT_CLIENT_ID` configured, the adapter automatically falls back to the public `r/WarOfRights` Atom feed, which is what powers the feed today.
 
 Store the app ID shown beneath the app name and its secret in Google Secret Manager. Enter the values only in your local terminal, never in chat or source control:
 
@@ -179,10 +187,8 @@ $runtimeServiceAccount = "$projectNumber-compute@developer.gserviceaccount.com"
 gcloud secrets add-iam-policy-binding reddit-client-id --member="serviceAccount:$runtimeServiceAccount" --role='roles/secretmanager.secretAccessor'
 gcloud secrets add-iam-policy-binding reddit-client-secret --member="serviceAccount:$runtimeServiceAccount" --role='roles/secretmanager.secretAccessor'
 
-gcloud run services update inkengine-dispatch-api --project=inkeginelive-dispatch --region=us-east1 --set-secrets='REDDIT_CLIENT_ID=reddit-client-id:latest,REDDIT_CLIENT_SECRET=reddit-client-secret:latest'
+gcloud run services update inkengine-dispatch-api --project=inkeginelive-dispatch --region=us-east1 --update-secrets='REDDIT_CLIENT_ID=reddit-client-id:latest,REDDIT_CLIENT_SECRET=reddit-client-secret:latest'
 ```
-
-The API uses Reddit's application-only OAuth endpoint when `REDDIT_CLIENT_ID` is configured. Without it, the adapter falls back to the public `r/WarOfRights` Atom feed.
 
 Dispatch can also ingest a separate hosted media feed for curated videos you own or are licensed to host. Set `INKENGINE_MEDIA_FEED_URL` to a JSON feed that returns items with `playbackUrl` values pointing at HLS manifests.
 
