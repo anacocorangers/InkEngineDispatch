@@ -124,11 +124,13 @@ app.post<{ Body: { content?: string } }>('/api/discord/preview', async (request,
   return getDiscordEventPreview(request.body.content)
 })
 
-app.get('/api/sources', async () => {
+app.get('/api/sources', async (_request, reply) => {
+  reply.header('cache-control', 'no-store')
   return buildSourceStatuses(new Date(), undefined, postRepository)
 })
 
-app.get<{ Querystring: { cursor?: string; limit?: string } }>('/api/feed', async (request) => {
+app.get<{ Querystring: { cursor?: string; limit?: string } }>('/api/feed', async (request, reply) => {
+  reply.header('cache-control', 'no-store')
   const requestedLimit = Number(request.query.limit ?? config.feedPageSize)
   const limit = Number.isFinite(requestedLimit)
     ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 100)
