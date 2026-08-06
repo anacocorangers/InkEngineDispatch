@@ -498,7 +498,7 @@
   background: var(--panel);
 }
 
-.creator-card img {
+.creator-card > img {
   width: 3.4rem;
   height: 3.4rem;
   margin-bottom: 0.6rem;
