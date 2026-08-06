@@ -182,3 +182,29 @@ export const SOURCE_DEFINITIONS: SourceDefinition[] = [
     statusNote: 'Public blogs can be read with an API key; OAuth supports private access.',
   },
 ]
+
+export const creatorChannelSchema = z.object({
+  platform: sourceIdSchema,
+  url: z.url(),
+  label: z.string().optional(),
+})
+
+export type CreatorChannel = z.infer<typeof creatorChannelSchema>
+
+export const creatorProfileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  avatarUrl: z.url().optional(),
+  tags: z.array(z.string()).default([]),
+  channels: z.array(creatorChannelSchema).min(1),
+})
+
+export type CreatorProfile = z.infer<typeof creatorProfileSchema>
+
+export const creatorsResponseSchema = z.object({
+  generatedAt: z.iso.datetime(),
+  creators: z.array(creatorProfileSchema),
+})
+
+export type CreatorsResponse = z.infer<typeof creatorsResponseSchema>

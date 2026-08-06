@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Hls from 'hls.js'
-import type { DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
+import type { CreatorsResponse, DispatchItem, FeedResponse, SourceResponse } from '@inkengine/contracts'
 import { buildEmbedUrl, isHlsManifestUrl } from './youtube'
 import {
   compareDispatchItems,
@@ -19,7 +19,7 @@ import './Dispatch.css'
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 const showDeveloperHealth = import.meta.env.DEV
 const discordInstallUrl = apiUrl('/api/discord/install')
-type FeedFilter = 'live' | 'events' | 'videos' | 'articles'
+type FeedFilter = 'live' | 'events' | 'videos' | 'articles' | 'creators'
 function apiUrl(path: string) {
   return `${apiBaseUrl}${path}`
 }
@@ -153,6 +153,7 @@ function EventDetails({ item }: { item: DispatchItem }) {
 function App() {
   const [sources, setSources] = useState<SourceResponse | null>(null)
   const [feed, setFeed] = useState<FeedResponse | null>(null)
+  const [creators, setCreators] = useState<CreatorsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -179,8 +180,10 @@ function App() {
       const feedJson = await feedResponse.json() as FeedResponse
       const sourcesResponse = await fetch(apiUrl('/api/sources'))
       if (!sourcesResponse.ok) throw new Error('Unable to load source health.')
+      const creatorsResponse = await fetch(apiUrl('/api/creators'))
       setFeed(feedJson)
       setSources(await sourcesResponse.json() as SourceResponse)
+      if (creatorsResponse.ok) setCreators(await creatorsResponse.json() as CreatorsResponse)
     }
     catch {
       setError('Dispatch sources could not be reached. Cached reports remain available when possible.')
@@ -366,7 +369,7 @@ function App() {
           <h2>Dispatch Feed</h2>
           <p className='panel-copy'>Newest reports from connected sources, filed by publication time.</p>
           <div className='feed-filters' role='tablist' aria-label='Choose dispatch content type'>
-            {(['live', 'events', 'videos', 'articles'] as const).map((filter) => (
+            {(['live', 'events', 'videos', 'articles', 'creators'] as const).map((filter) => (
               <button
                 key={filter}
                 type='button'
@@ -384,38 +387,66 @@ function App() {
                     ? 'Events'
                     : filter === 'videos'
                       ? 'Watch videos'
-                      : 'Read articles'}
+                      : filter === 'articles'
+                        ? 'Read articles'
+                        : 'Creators'}
               </button>
             ))}
           </div>
-          <ul className='feed-list'>
-            {rankedFeedItems.map((item) => (
-              <li key={item.id} className='feed-item'>
-                <div className='feed-head'>
-                  <span className={`source-tag source-${item.sourceId}`}>{getSourceLabel(item)}</span>
-                  <time>{new Date(item.publishedAt).toLocaleString()}</time>
-                </div>
-                <VideoPlayer item={item} playing={playingItemId === item.id} onPlay={() => setPlayingItemId(item.id)} />
-                <h3>{item.title}</h3>
-                {isEventDispatchItem(item) && <EventDetails item={item} />}
-                <p>{item.summary}</p>
-                <a href={item.url} target='_blank' rel='noreferrer'>
-                  {isLiveDispatchItem(item)
-                    ? 'Open original stream'
-                    : isEventDispatchItem(item)
-                      ? 'Open event in Discord'
-                      : 'Read original dispatch'}
-                </a>
-              </li>
-            ))}
-            {feed?.items.length === 0 && <li className='feed-item'>No feed items yet.</li>}
-            {feed && feed.items.length > 0 && rankedFeedItems.length === 0 && (
-              <li className='feed-item'>
-                {feedFilter === 'live' ? 'No War of Rights streams are live right now.' : `No ${feedFilter} are available yet.`}
-              </li>
-            )}
-          </ul>
-          {feed?.nextCursor && (
+          {feedFilter === 'creators'
+            ? (
+                <ul className='creator-grid'>
+                  {(creators?.creators ?? []).map((creator) => (
+                    <li key={creator.id} className='creator-card'>
+                      {creator.avatarUrl && <img src={creator.avatarUrl} alt='' loading='lazy' />}
+                      <h3>{creator.name}</h3>
+                      <p>{creator.description}</p>
+                      <ul className='creator-channels'>
+                        {creator.channels.map((channel) => (
+                          <li key={channel.url}>
+                            <a href={channel.url} target='_blank' rel='noreferrer' className='source-tag'>
+                              {channel.label ?? sourceLabels[channel.platform] ?? channel.platform}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                  {(creators?.creators.length ?? 0) === 0 && (
+                    <li className='creator-card creator-empty'>No creators are highlighted yet.</li>
+                  )}
+                </ul>
+              )
+            : (
+                <ul className='feed-list'>
+                  {rankedFeedItems.map((item) => (
+                    <li key={item.id} className='feed-item'>
+                      <div className='feed-head'>
+                        <span className={`source-tag source-${item.sourceId}`}>{getSourceLabel(item)}</span>
+                        <time>{new Date(item.publishedAt).toLocaleString()}</time>
+                      </div>
+                      <VideoPlayer item={item} playing={playingItemId === item.id} onPlay={() => setPlayingItemId(item.id)} />
+                      <h3>{item.title}</h3>
+                      {isEventDispatchItem(item) && <EventDetails item={item} />}
+                      <p>{item.summary}</p>
+                      <a href={item.url} target='_blank' rel='noreferrer'>
+                        {isLiveDispatchItem(item)
+                          ? 'Open original stream'
+                          : isEventDispatchItem(item)
+                            ? 'Open event in Discord'
+                            : 'Read original dispatch'}
+                      </a>
+                    </li>
+                  ))}
+                  {feed?.items.length === 0 && <li className='feed-item'>No feed items yet.</li>}
+                  {feed && feed.items.length > 0 && rankedFeedItems.length === 0 && (
+                    <li className='feed-item'>
+                      {feedFilter === 'live' ? 'No War of Rights streams are live right now.' : `No ${feedFilter} are available yet.`}
+                    </li>
+                  )}
+                </ul>
+              )}
+          {feedFilter !== 'creators' && feed?.nextCursor && (
             <button className='load-more-button' type='button' onClick={loadOlder} disabled={loadingMore}>
               {loadingMore ? 'Loading...' : 'Load older dispatches'}
             </button>

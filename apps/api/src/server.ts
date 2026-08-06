@@ -13,6 +13,7 @@ import {
 import { fetchDiscordSetupGuilds } from './discordSetup.js'
 import { createDiscordAdapter, getDiscordEventPreview } from './adapters/discord.js'
 import { sourceAdapters } from './feedService.js'
+import { getFeaturedCreators } from './creators.js'
 
 const config = loadConfig()
 const postRepository = createPostRepository(config.databaseUrl)
@@ -127,6 +128,14 @@ app.post<{ Body: { content?: string } }>('/api/discord/preview', async (request,
 app.get('/api/sources', async (_request, reply) => {
   reply.header('cache-control', 'no-store')
   return buildSourceStatuses(new Date(), undefined, postRepository)
+})
+
+app.get('/api/creators', async (_request, reply) => {
+  reply.header('cache-control', 'no-store')
+  return {
+    generatedAt: new Date().toISOString(),
+    creators: getFeaturedCreators(),
+  }
 })
 
 app.get<{ Querystring: { cursor?: string; limit?: string } }>('/api/feed', async (request, reply) => {

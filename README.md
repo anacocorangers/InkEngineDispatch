@@ -58,11 +58,34 @@ npm run db:down
 - `GET /health`
 - `GET /api/sources`
 - `GET /api/feed`
+- `GET /api/creators`
 - `POST /api/refresh`
 
 Feed pagination uses `GET /api/feed?limit=20&cursor=...`. The response includes `nextCursor` and reports whether it came from `memory` or `postgres` storage.
 
 Source status reports the latest attempt and successful refresh times, imported item count, consecutive failures, and scheduled retry. Failed adapters use exponential backoff up to 30 minutes while the repository continues serving last-known-good reports. `POST /api/refresh` starts an immediate refresh of eligible sources but still honors active backoff windows.
+
+## Featured Creators
+
+The dashboard's **Creators** tab highlights hand-picked War of Rights content creators. Edit the `FEATURED_CREATORS` array in `apps/api/src/creators.ts` and redeploy to add, update, or remove someone:
+
+```ts
+export const FEATURED_CREATORS: CreatorProfile[] = [
+  {
+    id: 'unique-id',
+    name: 'Creator Name',
+    description: 'One or two sentences about their War of Rights content.',
+    avatarUrl: 'https://example.com/avatar.jpg', // optional
+    tags: ['cavalry', 'tutorials'], // optional
+    channels: [
+      { platform: 'youtube', url: 'https://www.youtube.com/@handle' },
+      { platform: 'twitch', url: 'https://www.twitch.tv/handle', label: 'Twitch (live)' }, // label is optional
+    ],
+  },
+]
+```
+
+There is no automated ingestion here by design — creators are only featured when explicitly added to this list, and `GET /api/creators` simply serves it.
 
 ## Notes
 

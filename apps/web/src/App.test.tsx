@@ -25,6 +25,7 @@ describe('App', () => {
     expect(html).not.toContain('All dispatches')
     expect(html).toContain('Live now')
     expect(html).toContain('Events')
+    expect(html).toContain('Creators')
     expect(html).toContain('Add to Discord')
     expect(html).toContain('href="/api/discord/install"')
   })

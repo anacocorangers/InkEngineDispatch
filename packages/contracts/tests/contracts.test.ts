@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   SOURCE_DEFINITIONS,
+  creatorProfileSchema,
   dispatchItemSchema,
   sourceDefinitionSchema,
 } from '../src/index.js'
@@ -57,5 +58,22 @@ describe('contracts package', () => {
 
     expect(feed.nextCursor).toBeNull()
     expect(feed.storage).toBe('memory')
+  })
+
+  it('validates a creator profile with at least one channel', () => {
+    const parsed = creatorProfileSchema.parse({
+      id: 'demo-creator',
+      name: 'Demo Creator',
+      description: 'Covers War of Rights skirmishes and campaigns.',
+      channels: [{ platform: 'youtube', url: 'https://www.youtube.com/@demo-creator' }],
+    })
+
+    expect(parsed.tags).toEqual([])
+    expect(() => creatorProfileSchema.parse({
+      id: 'no-channels',
+      name: 'No Channels',
+      description: 'Missing required channel list.',
+      channels: [],
+    })).toThrow()
   })
 })
