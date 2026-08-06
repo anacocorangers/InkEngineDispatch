@@ -273,19 +273,21 @@ function App() {
         </div>
         <div className='masthead-body'>
           <div>
-            <p className='eyebrow'>Dispatches from the digital front</p>
-            <h1>Dispatch.<wbr />InkEngine.<wbr />Live</h1>
+            <p className='eyebrow'>Dispatch.InkEngine.Live</p>
+            <h1>Dispatches from the digital front</h1>
             <p className='subtitle'>Reports, moving pictures, and community intelligence from the War of Rights.</p>
           </div>
-          <div className='pulse-chip'>
-            <span className={loading ? 'dot pending' : error ? 'dot down' : 'dot live'} />
-            <div>
-              <strong>{error ? 'Line Interrupted' : 'Wire Service Active'}</strong>
-              <small>{feed ? `Updated ${new Date(feed.generatedAt).toLocaleTimeString()}` : 'Awaiting first dispatch'}</small>
-              {feed && <small className='storage-label'>{feed.storage} archive</small>}
+          <div className='masthead-actions'>
+            <a className='discord-install' href={discordInstallUrl}>Add to Discord</a>
+            <div className='pulse-chip'>
+              <span className={loading ? 'dot pending' : error ? 'dot down' : 'dot live'} />
+              <div>
+                <strong>{error ? 'Line Interrupted' : 'Wire Service Active'}</strong>
+                <small>{feed ? `Updated ${new Date(feed.generatedAt).toLocaleTimeString()}` : 'Awaiting first dispatch'}</small>
+                {feed && <small className='storage-label'>{feed.storage} archive</small>}
+              </div>
             </div>
           </div>
-          <a className='discord-install' href={discordInstallUrl}>Add to Discord</a>
         </div>
         <div className='dispatch-dateline'>
           <span>Published continuously</span>
