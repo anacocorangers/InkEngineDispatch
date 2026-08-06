@@ -85,7 +85,7 @@ export const FEATURED_CREATORS: CreatorProfile[] = [
 ]
 ```
 
-There is no automated ingestion here by design — creators are only featured when explicitly added to this list, and `GET /api/creators` simply serves it.
+There is no automated ingestion of *which creators* appear — they are only featured when explicitly added to this list. `GET /api/creators` serves that list and, for each creator's `youtube` channel, resolves their uploads and attaches their most recent videos using the YouTube Data API (`YOUTUBE_API_KEY`, cached for 3 hours per channel). Without `YOUTUBE_API_KEY` configured, creators still appear with their name, description, and channel links, just without pulled-in videos.
 
 ## Notes
 

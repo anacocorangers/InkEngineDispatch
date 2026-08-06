@@ -202,9 +202,15 @@ export const creatorProfileSchema = z.object({
 
 export type CreatorProfile = z.infer<typeof creatorProfileSchema>
 
+export const featuredCreatorSchema = creatorProfileSchema.extend({
+  videos: z.array(dispatchItemSchema).default([]),
+})
+
+export type FeaturedCreator = z.infer<typeof featuredCreatorSchema>
+
 export const creatorsResponseSchema = z.object({
   generatedAt: z.iso.datetime(),
-  creators: z.array(creatorProfileSchema),
+  creators: z.array(featuredCreatorSchema),
 })
 
 export type CreatorsResponse = z.infer<typeof creatorsResponseSchema>

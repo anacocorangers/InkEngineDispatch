@@ -488,7 +488,7 @@
 
 .creator-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
   gap: 1.1rem;
 }
 
@@ -533,6 +533,30 @@
   border: 1px solid var(--line);
   font-size: 0.68rem;
   text-decoration: none;
+}
+
+.creator-videos {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0.8rem 0 0;
+  border-top: 1px dotted var(--line-soft);
+}
+
+.creator-videos li + li {
+  margin-top: 0.9rem;
+}
+
+.creator-videos h4 {
+  margin: 0.5rem 0 0.15rem;
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+
+.creator-videos time {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 0.65rem;
+  text-transform: uppercase;
 }
 
 .creator-card.creator-empty {

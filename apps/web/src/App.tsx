@@ -410,6 +410,21 @@ function App() {
                           </li>
                         ))}
                       </ul>
+                      {creator.videos.length > 0 && (
+                        <ul className='creator-videos'>
+                          {creator.videos.map((video) => (
+                            <li key={video.id}>
+                              <VideoPlayer
+                                item={video}
+                                playing={playingItemId === video.id}
+                                onPlay={() => setPlayingItemId(video.id)}
+                              />
+                              <h4>{video.title}</h4>
+                              <time>{new Date(video.publishedAt).toLocaleDateString()}</time>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
                   {(creators?.creators.length ?? 0) === 0 && (

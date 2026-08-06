@@ -14,6 +14,7 @@ import { fetchDiscordSetupGuilds } from './discordSetup.js'
 import { createDiscordAdapter, getDiscordEventPreview } from './adapters/discord.js'
 import { sourceAdapters } from './feedService.js'
 import { getFeaturedCreators } from './creators.js'
+import { getChannelVideos } from './creatorVideos.js'
 
 const config = loadConfig()
 const postRepository = createPostRepository(config.databaseUrl)
@@ -132,9 +133,14 @@ app.get('/api/sources', async (_request, reply) => {
 
 app.get('/api/creators', async (_request, reply) => {
   reply.header('cache-control', 'no-store')
+  const creators = await Promise.all(getFeaturedCreators().map(async (creator) => {
+    const youtubeChannel = creator.channels.find((channel) => channel.platform === 'youtube')
+    const videos = youtubeChannel ? await getChannelVideos(youtubeChannel.url) : []
+    return { ...creator, videos }
+  }))
   return {
     generatedAt: new Date().toISOString(),
-    creators: getFeaturedCreators(),
+    creators,
   }
 })
 
