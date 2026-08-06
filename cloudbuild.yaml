@@ -25,6 +25,7 @@ steps:
       - --platform=managed
       - --allow-unauthenticated
       - --port=8080
+      - --min-instances=1
 
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID

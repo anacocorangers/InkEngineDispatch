@@ -10,11 +10,25 @@ export type FeedPage = {
   nextCursor: string | null
 }
 
+export type StoredSourceHealth = {
+  sourceId: string
+  lastAttemptAt: string | null
+  lastSuccessfulSync: string | null
+  itemCount: number
+  consecutiveFailures: number
+  nextRetryAt: string | null
+  errorMessage: string | null
+}
+
 export interface PostRepository {
   readonly storage: 'memory' | 'postgres'
   upsertPosts(items: DispatchItem[]): Promise<void>
   removeStaleLivePosts(sourceId: DispatchItem['sourceId'], activeIds: string[]): Promise<void>
   listPosts(limit: number, cursor?: string): Promise<FeedPage>
+  listDiscordChannelIds(): Promise<string[]>
+  saveDiscordGuildChannels(guildId: string, guildName: string, channelIds: string[]): Promise<void>
+  listSourceHealth(): Promise<StoredSourceHealth[]>
+  saveSourceHealth(health: StoredSourceHealth[]): Promise<void>
 }
 
 type CursorValue = {
@@ -46,6 +60,8 @@ function compareItems(left: DispatchItem, right: DispatchItem) {
 export class MemoryPostRepository implements PostRepository {
   readonly storage = 'memory' as const
   private readonly posts = new Map<string, DispatchItem>()
+  private readonly discordGuilds = new Map<string, { name: string; channelIds: string[] }>()
+  private readonly sourceHealth = new Map<string, StoredSourceHealth>()
 
   async upsertPosts(items: DispatchItem[]) {
     for (const item of items) {
@@ -81,6 +97,22 @@ export class MemoryPostRepository implements PostRepository {
         ? encodeCursor({ publishedAt: last.publishedAt, id: last.id })
         : null,
     }
+  }
+
+  async listDiscordChannelIds() {
+    return [...new Set([...this.discordGuilds.values()].flatMap((guild) => guild.channelIds))]
+  }
+
+  async saveDiscordGuildChannels(guildId: string, guildName: string, channelIds: string[]) {
+    this.discordGuilds.set(guildId, { name: guildName, channelIds: [...new Set(channelIds)] })
+  }
+
+  async listSourceHealth() {
+    return [...this.sourceHealth.values()].map((health) => ({ ...health }))
+  }
+
+  async saveSourceHealth(health: StoredSourceHealth[]) {
+    health.forEach((entry) => this.sourceHealth.set(entry.sourceId, { ...entry }))
   }
 }
 
@@ -179,6 +211,60 @@ export class PostgresPostRepository implements PostRepository {
         ? encodeCursor({ publishedAt: last.publishedAt.toISOString(), id: last.id })
         : null,
     }
+  }
+
+  async listDiscordChannelIds() {
+    const rows = await this.db.select({ channelIds: schema.discordGuildSettings.channelIds })
+      .from(schema.discordGuildSettings)
+    return [...new Set(rows.flatMap((row) => row.channelIds))]
+  }
+
+  async saveDiscordGuildChannels(guildId: string, guildName: string, channelIds: string[]) {
+    await this.db.insert(schema.discordGuildSettings)
+      .values({ guildId, guildName, channelIds: [...new Set(channelIds)] })
+      .onConflictDoUpdate({
+        target: schema.discordGuildSettings.guildId,
+        set: { guildName, channelIds: [...new Set(channelIds)], updatedAt: new Date() },
+      })
+  }
+
+  async listSourceHealth(): Promise<StoredSourceHealth[]> {
+    const rows = await this.db.select().from(schema.sourceHealth)
+    return rows.map((row) => ({
+      sourceId: row.sourceId,
+      lastAttemptAt: row.lastAttemptAt?.toISOString() ?? null,
+      lastSuccessfulSync: row.lastSuccessfulSync?.toISOString() ?? null,
+      itemCount: row.itemCount,
+      consecutiveFailures: row.consecutiveFailures,
+      nextRetryAt: row.nextRetryAt?.toISOString() ?? null,
+      errorMessage: row.errorMessage,
+    }))
+  }
+
+  async saveSourceHealth(health: StoredSourceHealth[]) {
+    if (health.length === 0) return
+    await this.db.insert(schema.sourceHealth)
+      .values(health.map((entry) => ({
+        sourceId: entry.sourceId,
+        lastAttemptAt: entry.lastAttemptAt ? new Date(entry.lastAttemptAt) : null,
+        lastSuccessfulSync: entry.lastSuccessfulSync ? new Date(entry.lastSuccessfulSync) : null,
+        itemCount: entry.itemCount,
+        consecutiveFailures: entry.consecutiveFailures,
+        nextRetryAt: entry.nextRetryAt ? new Date(entry.nextRetryAt) : null,
+        errorMessage: entry.errorMessage,
+      })))
+      .onConflictDoUpdate({
+        target: schema.sourceHealth.sourceId,
+        set: {
+          lastAttemptAt: sql`excluded.last_attempt_at`,
+          lastSuccessfulSync: sql`excluded.last_successful_sync`,
+          itemCount: sql`excluded.item_count`,
+          consecutiveFailures: sql`excluded.consecutive_failures`,
+          nextRetryAt: sql`excluded.next_retry_at`,
+          errorMessage: sql`excluded.error_message`,
+          updatedAt: new Date(),
+        },
+      })
   }
 }
 

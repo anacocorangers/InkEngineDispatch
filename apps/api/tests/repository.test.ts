@@ -95,4 +95,29 @@ describe('post repository', () => {
     expect(second.items.map((item) => item.id)).toEqual(['oldest'])
     expect(second.nextCursor).toBeNull()
   })
+
+  it('persists unique Discord channels by guild', async () => {
+    const repository = new MemoryPostRepository()
+    await repository.saveDiscordGuildChannels('guild-1', 'First', ['channel-1', 'channel-1'])
+    await repository.saveDiscordGuildChannels('guild-2', 'Second', ['channel-2'])
+
+    await expect(repository.listDiscordChannelIds()).resolves.toEqual(['channel-1', 'channel-2'])
+  })
+
+  it('persists source health records', async () => {
+    const repository = new MemoryPostRepository()
+    await repository.saveSourceHealth([{
+      sourceId: 'discord',
+      lastAttemptAt: '2026-08-05T20:00:00.000Z',
+      lastSuccessfulSync: '2026-08-05T20:00:00.000Z',
+      itemCount: 2,
+      consecutiveFailures: 0,
+      nextRetryAt: null,
+      errorMessage: null,
+    }])
+
+    await expect(repository.listSourceHealth()).resolves.toEqual([
+      expect.objectContaining({ sourceId: 'discord', itemCount: 2 }),
+    ])
+  })
 })

@@ -1,0 +1,26 @@
+.discord-setup-shell {
+  width: min(46rem, calc(100% - 2rem));
+  margin: 1rem auto 3rem;
+  padding: clamp(1rem, 4vw, 2.5rem);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.discord-setup-shell header { border-bottom: 3px double var(--line); }
+.discord-setup-shell header p { color: var(--oxblood); text-transform: uppercase; }
+.discord-setup-shell header span { display: block; margin: 0.5rem 0 1rem; color: var(--ink-muted); }
+.discord-setup-shell section { padding: 1rem 0; border-bottom: 1px solid var(--line-soft); }
+.discord-setup-shell h1 { font-size: clamp(2.3rem, 8vw, 4rem); }
+.discord-setup-shell h2 { font-size: 1.5rem; }
+.discord-setup-shell label { display: flex; align-items: center; gap: 0.7rem; min-height: 2.6rem; cursor: pointer; }
+.discord-setup-shell input { width: 1.1rem; height: 1.1rem; accent-color: var(--field); }
+.discord-setup-shell button { margin: 1.2rem 1rem 0 0; padding: 0.7rem 1rem; color: var(--paper); background: var(--field); border: 1px solid var(--ink); font: inherit; cursor: pointer; }
+.discord-setup-shell button:disabled { opacity: 0.45; cursor: default; }
+.discord-setup-shell > a { color: var(--oxblood); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
+.event-preview textarea { width: 100%; margin-top: 0.7rem; padding: 0.7rem; resize: vertical; color: var(--ink); background: rgba(255, 255, 255, 0.35); border: 1px solid var(--line); font: inherit; }
+.event-preview button { margin-top: 0.7rem; }
+.preview-result { display: grid; gap: 0.2rem; margin-top: 0.7rem; padding: 0.7rem; border-left: 3px solid; }
+.preview-result.accepted { color: #234938; border-color: var(--field); background: #dbe3d5; }
+.preview-result.rejected { color: #6c2522; border-color: var(--oxblood); background: #eddbd2; }
+.preview-result span { font-size: 0.78rem; }

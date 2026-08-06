@@ -26,7 +26,7 @@ import {
 } from './adapters/social.js'
 import { mediaAdapter } from './adapters/media.js'
 import type { SourceAdapter } from './adapters/types.js'
-import { MemoryPostRepository, type PostRepository } from './db/repository.js'
+import { MemoryPostRepository, type PostRepository, type StoredSourceHealth } from './db/repository.js'
 
 export const sourceAdapters: SourceAdapter[] = [
   youtubeAdapter,
@@ -87,6 +87,15 @@ function getHealth(registry: Map<string, RuntimeSourceHealth>, sourceId: string)
   return initial
 }
 
+async function hydrateHealth(repository: PostRepository, registry: Map<string, RuntimeSourceHealth>) {
+  const stored = await repository.listSourceHealth()
+  stored.forEach(({ sourceId, ...health }) => registry.set(sourceId, health))
+}
+
+function storedHealth(registry: Map<string, RuntimeSourceHealth>, sourceIds: string[]): StoredSourceHealth[] {
+  return sourceIds.map((sourceId) => ({ sourceId, ...getHealth(registry, sourceId) }))
+}
+
 async function refreshSources(
   now: Date,
   repository: PostRepository,
@@ -141,6 +150,7 @@ async function refreshSources(
   })
 
   await repository.upsertPosts(posts)
+  await repository.saveSourceHealth(storedHealth(registry, eligibleAdapters.map((adapter) => adapter.id)))
   await Promise.all(
     [...liveSnapshots].map(([sourceId, activeIds]) => repository.removeStaleLivePosts(sourceId, activeIds)),
   )
@@ -153,6 +163,7 @@ export async function buildFeed(
 ): Promise<FeedResponse> {
   const nowIso = now.toISOString()
   if (!options.cursor) {
+    await hydrateHealth(repository, options.healthRegistry ?? sourceHealth)
     await refreshSources(
       now,
       repository,
@@ -174,7 +185,9 @@ export async function buildFeed(
 export async function buildSourceStatuses(
   now = new Date(),
   registry: Map<string, RuntimeSourceHealth> = sourceHealth,
+  repository?: PostRepository,
 ): Promise<SourceResponse> {
+  if (repository) await hydrateHealth(repository, registry)
   const nowIso = now.toISOString()
   const statuses: SourceStatus[] = SOURCE_DEFINITIONS.map((source) => {
     const health = getHealth(registry, source.id)

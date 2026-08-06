@@ -11,16 +11,35 @@ export function isPlayableDispatchItem(item: DispatchItem) {
   return Boolean(item.thumbnailUrl && (item.playbackUrl || item.embedUrl))
 }
 
+export function isEventDispatchItem(item: DispatchItem) {
+  return item.sourceId === 'discord' && item.tags.includes('event')
+}
+
+function tagValue(item: DispatchItem, prefix: string) {
+  return item.tags.find((tag) => tag.startsWith(prefix))?.slice(prefix.length)
+}
+
+export function getEventDetails(item: DispatchItem) {
+  const eventStart = tagValue(item, 'event-start:')
+  return {
+    date: eventStart ? new Date(eventStart).toLocaleDateString(undefined, { dateStyle: 'long' }) : tagValue(item, 'event-date:'),
+    time: eventStart ? new Date(eventStart).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : tagValue(item, 'event-time:'),
+    regiment: tagValue(item, 'event-regiment:'),
+    server: tagValue(item, 'event-server:'),
+    location: tagValue(item, 'event-location:'),
+  }
+}
+
 export function isLiveDispatchItem(item: DispatchItem) {
-  return item.tags.includes('live') && isPlayableDispatchItem(item)
+  return !isEventDispatchItem(item) && item.tags.includes('live') && isPlayableDispatchItem(item)
 }
 
 export function isVideoDispatchItem(item: DispatchItem) {
-  return isPlayableDispatchItem(item) && !isLiveDispatchItem(item)
+  return !isEventDispatchItem(item) && isPlayableDispatchItem(item) && !isLiveDispatchItem(item)
 }
 
 export function isArticleDispatchItem(item: DispatchItem) {
-  return item.sourceId === 'steam' || !isPlayableDispatchItem(item)
+  return !isEventDispatchItem(item) && (item.sourceId === 'steam' || !isPlayableDispatchItem(item))
 }
 
 export function getYouTubeVideoId(item: DispatchItem) {
@@ -66,6 +85,7 @@ export function getSourceLabel(item: DispatchItem) {
   if (item.sourceId === 'official-site') return 'Official Development Update'
   if (item.sourceId === 'twitch') return 'Twitch Live'
   if (item.sourceId === 'community-events') return 'Community Event'
+  if (item.sourceId === 'discord') return 'Discord Event'
   if (item.sourceId === 'reddit') return 'Reddit Community'
   if (item.sourceId === 'youtube') return 'Community Video'
   if (item.sourceId === 'media') return 'InkEngine Video'

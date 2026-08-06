@@ -6,9 +6,11 @@ import { buildEmbedUrl, buildYouTubeEmbedUrl, isHlsManifestUrl } from './youtube
 import {
   compareDispatchItems,
   dedupeDispatchItems,
+  getEventDetails,
   getSourceLabel,
   getVideoPosterUrl,
   isArticleDispatchItem,
+  isEventDispatchItem,
   isLiveDispatchItem,
   isPlayableDispatchItem,
   isVideoDispatchItem,
@@ -21,6 +23,9 @@ describe('App', () => {
     expect(html).toContain('Dispatch.<wbr/>InkEngine.<wbr/>Live')
     expect(html).not.toContain('All dispatches')
     expect(html).toContain('Live now')
+    expect(html).toContain('Events')
+    expect(html).toContain('Add to Discord')
+    expect(html).toContain('href="/api/discord/install"')
   })
 
   it('has a health-panel label for every registered source', () => {
@@ -183,6 +188,42 @@ describe('App', () => {
 
     expect(isPlayableDispatchItem(redditArticle)).toBe(false)
     expect(isArticleDispatchItem(redditArticle)).toBe(true)
+  })
+
+  it('routes Discord event reports exclusively to the events tab', () => {
+    const event: DispatchItem = {
+      id: 'discord:event',
+      sourceId: 'discord',
+      title: 'Grand campaign muster',
+      summary: 'Form up at 8 PM.',
+      url: 'https://discord.com/channels/guild/channel/message',
+      publishedAt: '2026-08-05T18:00:00.000Z',
+      tags: [
+        'discord',
+        'community',
+        'war-of-rights',
+        'event',
+        'event-date:August 12',
+        'event-time:8 PM Eastern',
+        'event-regiment:1st Maryland',
+        'event-server:War of Rights Official',
+        'event-location:Antietam',
+      ],
+    }
+
+    expect(isEventDispatchItem(event)).toBe(true)
+    expect(isLiveDispatchItem(event)).toBe(false)
+    expect(isVideoDispatchItem(event)).toBe(false)
+    expect(isArticleDispatchItem(event)).toBe(false)
+    expect(getSourceLabel(event)).toBe('Discord Event')
+    expect(getEventDetails(event)).toEqual({
+      date: 'August 12',
+      time: '8 PM Eastern',
+      regiment: '1st Maryland',
+      server: 'War of Rights Official',
+      location: 'Antietam',
+    })
+    expect(isEventDispatchItem({ ...event, tags: ['discord', 'community', 'war-of-rights'] })).toBe(false)
   })
 
   it('ranks War of Rights items ahead of generic bannerlord clips', () => {

@@ -52,3 +52,22 @@ export const collectionRuns = pgTable('collection_runs', {
 }, (table) => [
   index('collection_runs_source_started_idx').on(table.sourceId, table.startedAt),
 ])
+
+export const discordGuildSettings = pgTable('discord_guild_settings', {
+  guildId: varchar('guild_id', { length: 32 }).primaryKey(),
+  guildName: text('guild_name').notNull(),
+  channelIds: jsonb('channel_ids').$type<string[]>().notNull().default([]),
+  configuredAt: timestamp('configured_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const sourceHealth = pgTable('source_health', {
+  sourceId: varchar('source_id', { length: 40 }).primaryKey(),
+  lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+  lastSuccessfulSync: timestamp('last_successful_sync', { withTimezone: true }),
+  itemCount: integer('item_count').notNull().default(0),
+  consecutiveFailures: integer('consecutive_failures').notNull().default(0),
+  nextRetryAt: timestamp('next_retry_at', { withTimezone: true }),
+  errorMessage: text('error_message'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})

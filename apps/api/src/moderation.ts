@@ -9,6 +9,10 @@ const blockedPatterns = [
   /\btrainer\b/i,
 ]
 
+const blockedItemIds = new Set([
+  'discord:1534637141991362581',
+])
+
 const warOfRightsPattern = /war\s*of\s*rights/i
 
 function hasWarOfRightsMarker(item: DispatchItem) {
@@ -18,6 +22,7 @@ function hasWarOfRightsMarker(item: DispatchItem) {
 
 export function isAllowedDispatchItem(item: DispatchItem) {
   if (item.id.endsWith('-sample')) return false
+  if (blockedItemIds.has(item.id)) return false
 
   if (item.sourceId === 'youtube') {
     if (!warOfRightsPattern.test(`${item.title}\n${item.summary}`)) return false

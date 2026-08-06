@@ -3,6 +3,20 @@ import type { DispatchItem } from '@inkengine/contracts'
 import { isAllowedDispatchItem } from '../src/moderation.js'
 
 describe('moderation', () => {
+  it('rejects explicitly removed Discord posts', () => {
+    const item = {
+      id: 'discord:1534637141991362581',
+      sourceId: 'discord',
+      title: 'test',
+      summary: 'test',
+      url: 'https://discord.com/channels/1519346055710376026/1534610594903232584/1534637141991362581',
+      publishedAt: '2026-08-05T18:00:06.000Z',
+      tags: ['discord', 'community', 'war-of-rights'],
+    } as DispatchItem
+
+    expect(isAllowedDispatchItem(item)).toBe(false)
+  })
+
   it('rejects stale sample items from every source', () => {
     const item = {
       id: 'steam-sample',

@@ -1,7 +1,9 @@
 param(
     [string]$Project = 'inkeginelive-dispatch',
     [string]$Region = 'us-east1',
-    [string]$Service = 'inkengine-dispatch-api'
+    [string]$Service = 'inkengine-dispatch-api',
+    [switch]$TokenFromClipboard,
+    [string]$ChannelIds
 )
 
 $ErrorActionPreference = 'Stop'
@@ -58,11 +60,32 @@ function Add-SecretVersion([string]$Name, [string]$Value) {
     }
 }
 
-$botToken = (Read-SecretText 'Discord bot token').Trim()
-$channelIds = (Read-Host 'Discord channel IDs (comma-separated)').Trim()
+$botToken = if ($TokenFromClipboard) {
+    try {
+        (Get-Clipboard -Raw).Trim()
+    }
+    finally {
+        Set-Clipboard -Value $null
+    }
+}
+else {
+    (Read-SecretText 'Discord bot token').Trim()
+}
+if ($botToken.StartsWith('Bot ', [StringComparison]::OrdinalIgnoreCase)) {
+    $botToken = $botToken.Substring(4).Trim()
+}
+$botToken = $botToken.Trim('"', "'")
+$botToken = $botToken -replace '\s', ''
+if ([string]::IsNullOrWhiteSpace($ChannelIds)) {
+    $ChannelIds = Read-Host 'Discord channel IDs (comma-separated)'
+}
+$channelIds = $ChannelIds.Trim()
 
 if ($botToken.Length -lt 20) {
     throw "Discord bot token was only $($botToken.Length) character(s); paste the full token from the Discord Developer Portal."
+}
+if ($botToken -notmatch '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$') {
+    throw 'The copied value is not a Discord bot token. Use Copy beside Token on the Developer Portal Bot page.'
 }
 if ($channelIds -notmatch '^\d{15,22}(,\s*\d{15,22})*$') {
     throw 'Discord channel IDs must be comma-separated numeric IDs.'
@@ -80,11 +103,48 @@ catch {
 foreach ($channelId in $channelIds -split ',') {
     try {
         $channel = Invoke-RestMethod -Uri "https://discord.com/api/v10/channels/$channelId" -Headers $discordHeaders
+    }
+    catch {
+        $statusCode = [int]$_.Exception.Response.StatusCode
+        $discordError = $_.ErrorDetails.Message
+        Write-Host "Discord denied channel $channelId metadata (HTTP $statusCode): $discordError"
+        $discordErrorCode = try { ($discordError | ConvertFrom-Json).code } catch { $null }
+        if ($discordErrorCode -eq 40333) {
+            Write-Warning "Discord reported a transient internal network error for channel $channelId. Cloud Run will retry from its own network."
+            continue
+        }
+        Write-Host "Checking the bot's visible servers and channels..."
+        try {
+            $guilds = @(Invoke-RestMethod -Uri 'https://discord.com/api/v10/users/@me/guilds' -Headers $discordHeaders)
+            foreach ($guild in $guilds) {
+                $guildPermissions = [UInt64]$guild.permissions
+                $isAdministrator = ($guildPermissions -band 8) -ne 0
+                $canViewChannels = ($guildPermissions -band 1024) -ne 0
+                $canReadHistory = ($guildPermissions -band 65536) -ne 0
+                Write-Host "Visible server: $($guild.name) ($($guild.id)); Administrator: $isAdministrator; View Channels: $canViewChannels; Read Message History: $canReadHistory"
+                try {
+                    $visibleChannels = @(Invoke-RestMethod -Uri "https://discord.com/api/v10/guilds/$($guild.id)/channels" -Headers $discordHeaders)
+                    $visibleChannels |
+                        Where-Object { $_.type -in @(0, 5, 15, 16) } |
+                        ForEach-Object { Write-Host "  #$($_.name) ($($_.id))" }
+                }
+                catch {
+                    Write-Host '  Discord did not allow channel enumeration for this server.'
+                }
+            }
+        }
+        catch {
+            Write-Host 'Discord did not allow server enumeration for this bot.'
+        }
+        throw "Discord cannot access channel $channelId metadata (HTTP $statusCode). Confirm the ID belongs to a channel in the server where the bot is installed."
+    }
+    try {
         Invoke-RestMethod -Uri "https://discord.com/api/v10/channels/$channelId/messages?limit=1" -Headers $discordHeaders | Out-Null
         Write-Host "Verified read access to #$($channel.name) ($channelId)."
     }
     catch {
-        throw "The bot cannot read Discord channel $channelId. Confirm it is installed in that server with View Channel and Read Message History."
+        $statusCode = [int]$_.Exception.Response.StatusCode
+        throw "Discord cannot read messages in #$($channel.name) ($channelId, HTTP $statusCode). Allow View Channel and Read Message History for the bot on that channel."
     }
 }
 

@@ -15,6 +15,20 @@
       "when": 1785776890325,
       "tag": "0001_slim_miek",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785959269162,
+      "tag": "0002_oval_kate_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785959390638,
+      "tag": "0003_dizzy_omega_flight",
+      "breakpoints": true
     }
   ]
 }

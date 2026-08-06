@@ -83,6 +83,20 @@ Create a bot in the Discord Developer Portal, invite it to the target server wit
 .\scripts\configure-discord.ps1
 ```
 
+For self-service server onboarding, add this production redirect under **OAuth2 > Redirects** in the Discord Developer Portal:
+
+```text
+https://inkengine-dispatch-api-482705553707.us-east1.run.app/api/discord/callback
+```
+
+Copy the OAuth2 client secret, then store and bind it without placing it in source control or chat:
+
+```powershell
+.\scripts\configure-discord-oauth.ps1 -ClientSecretFromClipboard
+```
+
+The public **Add to Discord** command then authorizes the bot with only View Channels and Read Message History. A server administrator chooses approved event channels on the setup page; those selections and source health are stored in PostgreSQL.
+
 ### Twitch Live Streams
 
 1. Sign in at `https://dev.twitch.tv/console/apps` and register an application.
@@ -99,6 +113,16 @@ Enter the client ID and client secret only at the secure terminal prompts. The s
 For local development, place those two variables in an untracked `.env` file instead. Twitch uses application-only OAuth; no streamer account login or user access token is required. The live feed searches Twitch for channels currently broadcasting War of Rights.
 
 The **Live now** tab combines Twitch, YouTube live broadcasts, and playable hosted media tagged `live`. Other platforms can join the same tab when their adapter emits a playable item with the `live` tag; direct HLS streams can use the hosted media feed.
+
+### TikTok Videos
+
+TikTok requires an approved developer application and a TikTok user authorization containing the `video.list` scope. After obtaining the user access token from TikTok's official OAuth flow, configure it without placing the value in source control or chat:
+
+```powershell
+.\scripts\configure-tiktok.ps1
+```
+
+The script reads the token through a masked prompt, stores it as `tiktok-access-token` in Secret Manager, grants the Cloud Run runtime identity access, and binds it as `TIKTOK_ACCESS_TOKEN`. TikTok access tokens expire and must be replaced or refreshed according to TikTok's current OAuth requirements.
 
 ## Google Cloud Run
 

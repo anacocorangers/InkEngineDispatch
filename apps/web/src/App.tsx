@@ -5,9 +5,11 @@ import { buildEmbedUrl, isHlsManifestUrl } from './youtube'
 import {
   compareDispatchItems,
   dedupeDispatchItems,
+  getEventDetails,
   getSourceLabel,
   getVideoPosterUrl,
   isArticleDispatchItem,
+  isEventDispatchItem,
   isLiveDispatchItem,
   isVideoDispatchItem,
   sourceLabels,
@@ -16,7 +18,8 @@ import './Dispatch.css'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 const showDeveloperHealth = import.meta.env.DEV
-type FeedFilter = 'live' | 'videos' | 'articles'
+const discordInstallUrl = apiUrl('/api/discord/install')
+type FeedFilter = 'live' | 'events' | 'videos' | 'articles'
 function apiUrl(path: string) {
   return `${apiBaseUrl}${path}`
 }
@@ -129,6 +132,24 @@ function VideoPlayer({ item, playing, onPlay }: { item: DispatchItem; playing: b
   )
 }
 
+function EventDetails({ item }: { item: DispatchItem }) {
+  const details = getEventDetails(item)
+  const facts = [
+    ['Date', details.date],
+    ['Time', details.time],
+    ['Regiment', details.regiment],
+    ['Server', details.server],
+    ['Location', details.location],
+  ].filter((fact): fact is [string, string] => Boolean(fact[1]))
+
+  if (facts.length === 0) return null
+  return (
+    <dl className='event-details'>
+      {facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+    </dl>
+  )
+}
+
 function App() {
   const [sources, setSources] = useState<SourceResponse | null>(null)
   const [feed, setFeed] = useState<FeedResponse | null>(null)
@@ -235,6 +256,7 @@ function App() {
     return curatedFeedItems
       .filter((item) => {
         if (feedFilter === 'live') return isLiveDispatchItem(item)
+        if (feedFilter === 'events') return isEventDispatchItem(item)
         if (feedFilter === 'videos') return isVideoDispatchItem(item)
         if (feedFilter === 'articles') return isArticleDispatchItem(item)
         return true
@@ -263,6 +285,7 @@ function App() {
               {feed && <small className='storage-label'>{feed.storage} archive</small>}
             </div>
           </div>
+          <a className='discord-install' href={discordInstallUrl}>Add to Discord</a>
         </div>
         <div className='dispatch-dateline'>
           <span>Published continuously</span>
@@ -341,7 +364,7 @@ function App() {
           <h2>Dispatch Feed</h2>
           <p className='panel-copy'>Newest reports from connected sources, filed by publication time.</p>
           <div className='feed-filters' role='tablist' aria-label='Choose dispatch content type'>
-            {(['live', 'videos', 'articles'] as const).map((filter) => (
+            {(['live', 'events', 'videos', 'articles'] as const).map((filter) => (
               <button
                 key={filter}
                 type='button'
@@ -353,7 +376,13 @@ function App() {
                   setPlayingItemId(null)
                 }}
               >
-                {filter === 'live' ? 'Live now' : filter === 'videos' ? 'Watch videos' : 'Read articles'}
+                {filter === 'live'
+                  ? 'Live now'
+                  : filter === 'events'
+                    ? 'Events'
+                    : filter === 'videos'
+                      ? 'Watch videos'
+                      : 'Read articles'}
               </button>
             ))}
           </div>
@@ -366,9 +395,14 @@ function App() {
                 </div>
                 <VideoPlayer item={item} playing={playingItemId === item.id} onPlay={() => setPlayingItemId(item.id)} />
                 <h3>{item.title}</h3>
+                {isEventDispatchItem(item) && <EventDetails item={item} />}
                 <p>{item.summary}</p>
                 <a href={item.url} target='_blank' rel='noreferrer'>
-                  {isLiveDispatchItem(item) ? 'Open original stream' : 'Read original dispatch'}
+                  {isLiveDispatchItem(item)
+                    ? 'Open original stream'
+                    : isEventDispatchItem(item)
+                      ? 'Open event in Discord'
+                      : 'Read original dispatch'}
                 </a>
               </li>
             ))}
