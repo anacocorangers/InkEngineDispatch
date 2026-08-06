@@ -5,7 +5,7 @@ export const FEATURED_CREATORS: CreatorProfile[] = [
   {
     id: 'battle-line-network',
     name: 'Battle Line Network',
-    description: 'War of Rights gameplay and community content.',
+    description: 'Discover a new dimension of excitement as Battle Line Network redefines War of Rights broadcasts in a way that rivals the intensity of a sports game day experience.',
     tags: ['war-of-rights'],
     channels: [
       { platform: 'youtube', url: 'https://www.youtube.com/@BattleLineNetwork' },
