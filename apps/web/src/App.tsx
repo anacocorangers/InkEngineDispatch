@@ -382,14 +382,14 @@ function App() {
                 }}
               >
                 {filter === 'live'
-                  ? 'Live now'
+                  ? 'On the Wire'
                   : filter === 'events'
-                    ? 'Events'
+                    ? 'Orders of the Day'
                     : filter === 'videos'
-                      ? 'Watch videos'
+                      ? 'Newsreels'
                       : filter === 'articles'
-                        ? 'Read articles'
-                        : 'Creators'}
+                        ? 'Bulletins'
+                        : 'Correspondents'}
               </button>
             ))}
           </div>
