@@ -19,11 +19,11 @@ import {
   linkedinAdapter,
   pinterestAdapter,
   snapchatAdapter,
-  telegramAdapter,
   threadsAdapter,
-  tumblrAdapter,
   xAdapter,
 } from './adapters/social.js'
+import { telegramAdapter } from './adapters/telegram.js'
+import { tumblrAdapter } from './adapters/tumblr.js'
 import { mediaAdapter } from './adapters/media.js'
 import type { SourceAdapter } from './adapters/types.js'
 import { MemoryPostRepository, type PostRepository, type StoredSourceHealth } from './db/repository.js'
