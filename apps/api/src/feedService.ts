@@ -22,7 +22,6 @@ import {
   threadsAdapter,
   xAdapter,
 } from './adapters/social.js'
-import { telegramAdapter } from './adapters/telegram.js'
 import { tumblrAdapter } from './adapters/tumblr.js'
 import { mediaAdapter } from './adapters/media.js'
 import type { SourceAdapter } from './adapters/types.js'
@@ -43,7 +42,6 @@ export const sourceAdapters: SourceAdapter[] = [
   instagramAdapter,
   threadsAdapter,
   linkedinAdapter,
-  telegramAdapter,
   pinterestAdapter,
   snapchatAdapter,
   tumblrAdapter,

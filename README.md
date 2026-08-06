@@ -16,7 +16,7 @@ InkEngine Dispatch is a sibling project in the InkEngine ecosystem. It tracks of
 - Hosted media feed for curated HLS playback
 - Reddit (optional OAuth for better limits)
 - Discord, TikTok, X, Facebook, Instagram, and Threads
-- LinkedIn, Telegram, Pinterest, Snapchat, and Tumblr
+- LinkedIn, Pinterest, Snapchat, and Tumblr
 
 ## Local Development
 
@@ -66,9 +66,8 @@ Source status reports the latest attempt and successful refresh times, imported 
 
 ## Notes
 
-- Telegram and Tumblr are implemented against their official public APIs; `x`, `facebook`, `instagram`, `threads`, `linkedin`, `pinterest`, and `snapchat` remain intentionally credential-safe stubs until account targets and approved API credentials are configured. InkEngine Dispatch does not bypass logins, rate limits, or platform access controls.
+- Tumblr is implemented against its official public API; `x`, `facebook`, `instagram`, `threads`, `linkedin`, `pinterest`, and `snapchat` remain intentionally credential-safe stubs until account targets and approved API credentials are configured. InkEngine Dispatch does not bypass logins, rate limits, or platform access controls.
 - Discord reads only explicitly configured channels through the official bot API using `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_IDS`.
-- Telegram reads only explicitly configured channels via `getUpdates` using `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHANNEL_IDS`; the bot must be added to each channel as an admin.
 - Tumblr reads only explicitly configured blogs using `TUMBLR_API_KEY` and `TUMBLR_BLOGS`.
 - TikTok reads videos authorized through the official Display API using `TIKTOK_ACCESS_TOKEN`; client credentials alone do not grant content access.
 - Twitch requires `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` from a Twitch application.
@@ -125,16 +124,6 @@ TikTok requires an approved developer application and a TikTok user authorizatio
 ```
 
 The script reads the token through a masked prompt, stores it as `tiktok-access-token` in Secret Manager, grants the Cloud Run runtime identity access, and binds it as `TIKTOK_ACCESS_TOKEN`. TikTok access tokens expire and must be replaced or refreshed according to TikTok's current OAuth requirements.
-
-### Telegram Channel Posts
-
-Create a bot with [@BotFather](https://t.me/BotFather) and add it to the target channel as an administrator so it receives `channel_post` updates through the official Bot API. Configure it without placing the token in source control:
-
-```powershell
-.\scripts\configure-telegram.ps1
-```
-
-The script stores the bot token as `telegram-bot-token` in Secret Manager, grants the Cloud Run runtime identity access, binds it as `TELEGRAM_BOT_TOKEN`, and sets `TELEGRAM_CHANNEL_IDS` to the comma-separated channel usernames or numeric chat IDs you approve. Only channels explicitly listed in `TELEGRAM_CHANNEL_IDS` are imported; the adapter polls `getUpdates` and does not read channel history from before the bot was added.
 
 ### Tumblr Posts
 

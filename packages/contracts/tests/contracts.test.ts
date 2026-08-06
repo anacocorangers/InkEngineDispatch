@@ -22,7 +22,6 @@ describe('contracts package', () => {
       'instagram',
       'threads',
       'linkedin',
-      'telegram',
       'pinterest',
       'snapchat',
       'tumblr',

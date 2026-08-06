@@ -15,7 +15,6 @@ export const sourceIdSchema = z.enum([
   'instagram',
   'threads',
   'linkedin',
-  'telegram',
   'pinterest',
   'snapchat',
   'tumblr',
@@ -163,12 +162,6 @@ export const SOURCE_DEFINITIONS: SourceDefinition[] = [
     label: 'LinkedIn',
     authRequirement: 'required',
     statusNote: 'Requires approved LinkedIn organization API access.',
-  },
-  {
-    id: 'telegram',
-    label: 'Telegram',
-    authRequirement: 'required',
-    statusNote: 'Requires a bot token and access to the target channel.',
   },
   {
     id: 'pinterest',
