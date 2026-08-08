@@ -20,6 +20,15 @@ export const FEATURED_CREATORS: CreatorProfile[] = [
       { platform: 'youtube', url: 'https://www.youtube.com/@StarsNBars1862' },
     ],
   },
+  {
+    id: 'kotow-war-of-rights',
+    name: 'Kotow War Of Rights',
+    description: 'Overhead views of War of Rights with commentary, featuring regimental events, cinematic match replays, and instructional videos that help players improve tactics and techniques from the unit to team level.',
+    tags: ['war-of-rights'],
+    channels: [
+      { platform: 'youtube', url: 'https://www.youtube.com/@KotowWarofRights-gc8iq' },
+    ],
+  },
 ]
 
 export function getFeaturedCreators(): CreatorProfile[] {
